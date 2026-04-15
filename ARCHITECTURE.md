@@ -1,0 +1,107 @@
+# April 15, 2026 MVP scaffold
+
+## Direction
+- Product name: **Codex Beacon**.
+- Scope is intentionally narrow for the first version:
+  - macOS only
+  - interactive `codex` sessions only
+  - no `codex exec`
+  - no Claude Code yet
+- The core design objective is minimal session overhead.
+
+## Primary architecture
+- `src/cli.ts`
+  - public command entrypoint
+  - install flow
+  - daemon lifecycle helpers
+  - manual session inspection helpers
+- `src/daemon.ts`
+  - detached local daemon
+  - Unix socket server for hook events
+  - session state updates
+  - notification dispatch
+- `src/session-registry.ts`
+  - persistent JSON store for sessions and counters
+  - monotonic default session naming
+- `src/hook-stop.ts`
+  - tiny stop-hook handler
+  - extracts minimal structured event data
+  - forwards to the daemon and exits fast
+- `src/hook-user-prompt-submit.ts`
+  - clears delivered notifications when a session becomes active again
+- `src/notify.ts`
+  - `terminal-notifier` integration
+  - notification grouping and removal
+- `src/focus.ts`
+  - macOS terminal focus helpers
+  - Terminal.app and iTerm2 AppleScript integration
+- `src/install.ts`
+  - shell integration generation
+  - user-level hook setup guidance
+
+## Why this stack
+- Codex hooks are current, experimental, and configurable from `hooks.json`. `SessionStart` provides startup or resume registration, while `UserPromptSubmit` and `Stop` run at turn scope. The hook input includes `session_id`, `cwd`, and `transcript_path`, which are exactly the minimum fields this project needs. citeturn773937search0turn659646search1turn659646search7
+- Because multiple hook handlers can run concurrently and hooks are still under active development, the safest design is a tiny enqueue path instead of doing summarization and notification work inside the hook itself. citeturn773937search0turn659646search4
+- npm distribution is the best first packaging path because it makes clone-based development and global install straightforward while keeping the wrapper and daemon easy to iterate on. This is an architecture choice for speed of shipping, not a claim that Node is the final native endpoint.
+
+## Data flow
+
+### Session launch
+- user types wrapped `codex`
+- wrapper captures:
+  - requested custom name if present
+  - cwd
+  - terminal app hint from `TERM_PROGRAM`
+  - frontmost window metadata when possible
+- wrapper passes launch metadata through environment variables and `exec`s the real `codex` binary
+- `SessionStart` hook registers the actual Codex `session_id` and the registry allocates a monotonic default name like `codex 3` when the user did not provide one
+
+### User reprompt
+- Codex emits `UserPromptSubmit`
+- hook sends `session-active` event to daemon
+- daemon marks the session as active and removes that session's grouped notification
+
+### Codex stops and waits
+- Codex emits `Stop`
+- hook sends `session-stop` event to daemon with:
+  - `session_id`
+  - `cwd`
+  - `transcript_path`
+  - timestamp
+- daemon derives a compact summary from the latest transcript tail when possible
+- daemon posts a grouped notification
+- notification click executes a focus command for that session
+
+## Notification model
+- Use `terminal-notifier` because the MVP needs click actions and later per-session removal.
+- Group notifications by session id so a resumed session can remove its outstanding notification.
+- Keep title short and summary bounded by config.
+
+## Focus model
+- Primary target: reactivate the exact existing terminal window/tab.
+- First supported terminal apps:
+  - Terminal.app
+  - iTerm2
+- Fallback behavior:
+  - activate the terminal app only
+  - later add resume shortcuts or deeper app integration
+
+## Config model
+- Store app state under `~/.codex-beacon/`.
+- Key files:
+  - `registry.json`
+  - `daemon.sock`
+  - `config.json`
+- Future:
+  - menu-bar process
+  - local dashboard server
+
+## Performance model
+- Hook handlers should finish in milliseconds.
+- Expensive work belongs only in the daemon.
+- Notification summarization uses transcript tail reads only and should avoid full-file parsing in the hot path.
+
+## Current limitations
+- Shell wrapping is the cleanest MVP path, but it requires user installation so the `codex` command is transparently intercepted.
+- Click-to-focus logic is terminal-app-specific and will need iterative hardening.
+- Notification center history is delegated to macOS for the MVP instead of building a custom dropdown UI immediately.
