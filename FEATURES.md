@@ -1,10 +1,24 @@
 # Working now
 
+## Changed on 2026-04-15 custom overlay pivot
+- `terminal-notifier` is no longer the active notification transport
+- native Swift menu-bar and overlay helper is now the active UI direction
+- `npm run build` compiles both the Node daemon and the Swift helper
+- local clone plus `npm link` remains the only install target for now
+- markdown files are now ignored for new untracked files; existing tracked docs remain versioned
+
+## Implemented in the custom UI slice
+- menu-bar item labeled `Beacon`
+- waiting-session count in the menu bar
+- custom floating overlay with one row per waiting session
+- row click runs the Beacon focus command
+- daemon-to-helper `show` and `clear` events over stdin
+
 ## Changed on 2026-04-15
 - notification click commands now use absolute Node and CLI paths
 - notification bodies parse assistant text from Codex JSONL instead of showing raw transcript JSON
 - VS Code and Cursor integrated terminals have app-level focus fallbacks
-- native macOS notification helper is now the likely replacement path if `terminal-notifier` UI/click behavior is not acceptable
+- this Notification Center path is superseded by the custom overlay pivot above
 
 ## MVP feature state as of 2026-04-15
 
@@ -19,12 +33,11 @@
 - `UserPromptSubmit` notification clearing
 - compact transcript-tail summary fallback
 - config for maximum notification body characters
-- config for notification sound and app icon when supported by `terminal-notifier`
 - beta install path via clone, `npm install`, `npm run build`, and `npm link`
 - app-level click fallback for VS Code and Cursor integrated terminals
 
 ## Partially wired, needs live macOS validation
-- macOS notification click action through `terminal-notifier`
+- custom overlay visual behavior in a real Codex session
 - Terminal.app focus by TTY, then window id, then app activation
 - iTerm/iTerm2 focus by TTY, then window id, then app activation
 - VS Code and Cursor focus only activate the app; exact integrated terminal selection is not yet implemented
@@ -36,13 +49,14 @@
   - blocked
   - needs approval
   - test failure
-- installer checks for `terminal-notifier`, Codex hooks config, and existing shell snippets
+- installer checks for Swift toolchain, Codex hooks config, and existing shell snippets
 - config editing commands for notification settings
-- real Notification Center and terminal focus validation notes
-- native notifier helper spike:
-  - first-party app identity and icon
-  - reliable click callback
-  - daemon IPC integration
+- real overlay and terminal focus validation notes
+- overlay polish:
+  - row hover and selected states
+  - keyboard dismissal
+  - better empty state
+  - helper restart/status command
 
 # Future ideas
 

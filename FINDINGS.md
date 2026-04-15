@@ -1,3 +1,16 @@
+# April 15, 2026 custom overlay findings
+
+## Implementation findings
+- A custom overlay does not require the Mac App Store for the current local-use goal.
+- The quickest useful architecture is a native Swift helper launched by the existing Node daemon, not a full rewrite of the daemon in Swift.
+- `swiftc` is available locally through Xcode Command Line Tools and successfully builds a single-file AppKit helper.
+- Keeping daemon-to-helper communication as newline-delimited JSON over stdin keeps the hook path unchanged and avoids adding another local socket for the first custom UI slice.
+
+## Product findings
+- Replacing `terminal-notifier` with a custom overlay gives Beacon control over layout, wording, row click behavior, menu-bar state, and app identity.
+- This also means Beacon now owns UI lifecycle details that macOS Notification Center previously handled, including later viewing, dismissal behavior, and visual polish.
+- For the MVP, this tradeoff is acceptable because the user values getting the custom UI direction out of the way more than public packaging.
+
 # April 15, 2026 notification click findings
 
 ## Screenshot findings

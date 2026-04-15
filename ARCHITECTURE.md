@@ -1,3 +1,37 @@
+# April 15, 2026 custom overlay architecture
+
+## Direction change
+- Codex Beacon now targets a custom macOS menu-bar and overlay helper instead of `terminal-notifier`.
+- This is a local clone-plus-link product path. Public npm packaging and Mac App Store distribution are not current requirements.
+- Existing Node/TypeScript pieces still own hooks, daemon IPC, registry state, summaries, naming, and focus commands.
+- A new Swift helper owns the visible companion UI:
+  - menu-bar status item
+  - custom floating overlay
+  - clickable waiting-session rows
+
+## New flow
+- `npm run build` now compiles:
+  - TypeScript into `dist/`
+  - Swift overlay helper into `dist/macos/CodexBeaconOverlay`
+- The daemon spawns the overlay helper on first event that needs UI synchronization.
+- The daemon writes newline-delimited JSON events to the helper's stdin:
+  - `show` with session id, display name, summary, timestamp, and structured focus command
+  - `clear` with session id
+- The helper keeps a small in-memory map of waiting sessions.
+- When a `show` event arrives, the helper updates the menu-bar count and opens the overlay near the top-right of the screen.
+- When a user clicks a session row, the helper runs the provided focus command and removes that row from the overlay.
+
+## Why this is not Mac App Store dependent
+- The helper is a local executable built by `swiftc`; local users can run it immediately from a clone.
+- For the current project posture, `npm install`, `npm run build`, and `npm link` are enough.
+- Signing/notarization can come later if the project needs easier external distribution. It is not required for local development.
+
+## Current limitations
+- The overlay currently exits with the daemon because the daemon owns its stdin pipe.
+- The overlay keeps only in-memory UI state; registry persistence remains in the Node daemon.
+- Exact VS Code integrated-terminal selection is still not implemented. VS Code and Cursor focus remains app-level.
+- The custom UI is intentionally plain first-pass AppKit. Visual polish, keyboard navigation, and richer session controls can follow.
+
 # April 15, 2026 notification click fix
 
 ## What changed

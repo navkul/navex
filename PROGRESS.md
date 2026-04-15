@@ -1,3 +1,32 @@
+## Refreshed on 2026-04-15 after custom overlay refactor
+
+## Completed now
+- Replaced `terminal-notifier` delivery with a native Swift menu-bar and floating overlay helper.
+- Added [macos/CodexBeaconOverlay.swift](/Users/arnavkulkarni/Developer/codex-beacon/macos/CodexBeaconOverlay.swift) as the first custom AppKit UI:
+  - menu-bar item
+  - waiting-session count
+  - custom overlay panel
+  - clickable session rows
+- Added [scripts/build-overlay.mjs](/Users/arnavkulkarni/Developer/codex-beacon/scripts/build-overlay.mjs) so `npm run build` compiles the helper into `dist/macos/CodexBeaconOverlay`.
+- Refactored [src/notify.ts](/Users/arnavkulkarni/Developer/codex-beacon/src/notify.ts) into an overlay transport that sends `show` and `clear` JSON events to the helper.
+- Updated install guidance to require Xcode Command Line Tools instead of `terminal-notifier`.
+- Added `*.md` to `.gitignore` as requested. Existing tracked docs remain tracked by git, so this does not remove the repo documentation contract.
+
+## Validation
+- `npm run check`
+- `npm run build`
+- Verified `dist/macos/CodexBeaconOverlay` is an arm64 Mach-O executable.
+- Fake-overlay daemon smoke flow verified:
+  - `Stop` produces a `show` overlay event with display name, summary, and structured focus command
+  - `UserPromptSubmit` produces a matching `clear` event
+  - registry status and summary persistence still work
+
+## Remaining next steps
+- Run a real Codex session and inspect the actual overlay UI behavior.
+- Improve overlay visual polish and spacing after seeing it live.
+- Decide whether row click should clear immediately, wait for focus success, or wait for the next `UserPromptSubmit`.
+- Add a helper health check or restart command if the UI process dies independently.
+
 ## Refreshed on 2026-04-15 after notification click fix
 
 ## Completed now

@@ -94,3 +94,9 @@ A good MVP means:
 ## Future feature posture
 
 Keep future ideas in `FEATURES.md`. Do not let future ideas expand the MVP until the working section is done.
+
+## Current UI direction
+
+The active UI direction is a custom macOS menu-bar and floating overlay helper built from this repo, not `terminal-notifier` or Notification Center.
+
+For now, treat clone plus `npm install`, `npm run build`, and `npm link` as the supported install path. Do not optimize for public npm packaging, Homebrew, notarization, or the Mac App Store unless explicitly requested.
