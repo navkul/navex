@@ -1,3 +1,26 @@
+# April 15, 2026 continuation update
+
+## What changed
+- The shell wrapper now preserves the real Codex binary through `CODEX_BEACON_CODEX_BIN`, with a PATH fallback when that variable is missing.
+- `src/launch.ts` captures launch metadata before starting Codex:
+  - custom display name
+  - `TERM_PROGRAM`
+  - best-effort Terminal/iTerm window id
+  - TTY path when available
+- `SessionStart` forwards that metadata to the daemon so click-to-focus has more than a generic terminal-app hint.
+- The session registry now treats `register-session` and `session-active` as active states, `session-stop` as waiting, and makes preferred custom names unique with deterministic suffixes.
+- Notification delivery now supports optional config fields for sound and app icon and picks the activation bundle id from the recorded terminal app.
+- Focus now attempts exact-ish TTY targeting first, then recorded window id, then app activation for Terminal.app and iTerm/iTerm2.
+
+## Updated data flow
+- `codex-beacon install` prints a wrapper snippet that exports the detected real `codex` path.
+- `codex-beacon launch` resolves the real binary, captures terminal metadata with short best-effort timeouts, then keeps the wrapper process attached until Codex exits.
+- Hooks still stay tiny. They only read stdin, attach metadata from environment where relevant, and send one socket event.
+- The daemon remains responsible for registry updates, summary extraction, notification delivery, and notification clearing.
+
+## Current focus limitation
+- TTY/window focus logic is implemented but still needs real Terminal.app and iTerm2 click validation. If exact targeting fails, the fallback remains app activation.
+
 # April 15, 2026 MVP scaffold
 
 ## Direction

@@ -1,19 +1,36 @@
 # Working now
 
-## MVP features to implement
-- transparent shell wrapper so the user still types `codex`
-- monotonic default naming for active interactive sessions
-- optional custom session name flag
+## MVP feature state as of 2026-04-15
+
+## Implemented or wired
+- transparent shell wrapper flow so the user still types `codex`
+- real Codex binary preservation through `CODEX_BEACON_CODEX_BIN`
+- monotonic default naming for tracked sessions
+- optional custom session name flag with deterministic conflict suffixes
 - persistent session registry on disk
-- low-latency `Stop` hook notification flow
+- low-latency `SessionStart`, `Stop`, and `UserPromptSubmit` hook event emission
+- `Stop` hook notification flow through the daemon
 - `UserPromptSubmit` notification clearing
-- compact session summary extraction from transcript tail
-- macOS notification click-to-focus for Terminal.app
-- macOS notification click-to-focus for iTerm2
-- config for max notification characters
-- config for notification transport behavior
-- install command that wires hooks and shell wrapper cleanly
-- beta install path via clone plus `npm link`
+- compact transcript-tail summary fallback
+- config for maximum notification body characters
+- config for notification sound and app icon when supported by `terminal-notifier`
+- beta install path via clone, `npm install`, `npm run build`, and `npm link`
+
+## Partially wired, needs live macOS validation
+- macOS notification click action through `terminal-notifier`
+- Terminal.app focus by TTY, then window id, then app activation
+- iTerm/iTerm2 focus by TTY, then window id, then app activation
+- install command prints a safer shell wrapper and hook instructions but does not yet edit user files directly
+
+## Still to harden
+- richer status classification in summaries:
+  - completed feature
+  - blocked
+  - needs approval
+  - test failure
+- installer checks for `terminal-notifier`, Codex hooks config, and existing shell snippets
+- config editing commands for notification settings
+- real Notification Center and terminal focus validation notes
 
 # Future ideas
 

@@ -1,3 +1,21 @@
+# April 15, 2026 continuation findings
+
+## Implementation findings
+- The original wrapper launch path spawned Codex and then immediately threw an `unreachable` error. The wrapper now remains attached and exits with the Codex child status.
+- The local checkout is on Node 18. The previous `commander` 14 dependency produced engine warnings, while the code and toolchain work on Node 18. The package now targets Node 18 or newer with `commander` 12.
+- Preserving the real Codex path at install time is safer than relying on a later `codex` lookup from inside the wrapper flow. The generated snippet now exports `CODEX_BEACON_CODEX_BIN`.
+- Custom session names need collision handling because multiple interactive sessions can request the same label. The registry now keeps the requested name when free and appends a numeric suffix on conflict.
+
+## Validation findings
+- `npm run check` and `npm run build` pass after the continuation changes.
+- A local fake-notifier smoke flow validated:
+  - `SessionStart` persists custom name, terminal app, window id, TTY, cwd, and transcript path
+  - `Stop` emits a grouped notification command with a truncated summary
+  - `UserPromptSubmit` emits the matching notification removal command
+  - duplicate custom names become `name 2`
+  - unnamed sessions receive monotonic names such as `codex 1`
+- Real Notification Center click behavior and real Terminal.app/iTerm2 focusing are still unvalidated on live apps.
+
 # April 15, 2026 research and product findings
 
 ## Codex findings

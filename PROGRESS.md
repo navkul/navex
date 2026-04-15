@@ -1,3 +1,35 @@
+## Refreshed on 2026-04-15 after wrapper and focus continuation
+
+## Completed now
+- Added a reproducible `package-lock.json`.
+- Lowered the supported Node runtime to Node 18 or newer and aligned `commander` with that engine.
+- Fixed the wrapper launch path so `codex-beacon launch` stays attached to the Codex child instead of throwing immediately.
+- Hardened install output so the generated shell snippet preserves the detected real Codex binary path in `CODEX_BEACON_CODEX_BIN`.
+- Added launch metadata capture for terminal app, TTY, and best-effort Terminal/iTerm window id.
+- Persisted terminal metadata through the `SessionStart` hook and session registry.
+- Fixed session status transitions:
+  - `register-session` and `session-active` are active
+  - `session-stop` is waiting
+- Made custom session names unique with deterministic suffixes.
+- Added optional notification config for sound and app icon.
+- Improved click focus from app-only activation to TTY, then window id, then app activation fallback for Terminal.app and iTerm/iTerm2.
+
+## Validation
+- `npm install`
+- `npm run check`
+- `npm run build`
+- `node dist/cli.js install --shell zsh`
+- `node dist/cli.js install --shell fish` fails as expected with `Unsupported shell: fish`
+- Fake-notifier daemon smoke flow verified stop notification emission, reprompt clearing, metadata persistence, custom-name suffixing, and monotonic default naming.
+- Fake Codex launch smoke flow verified custom-name capture, terminal metadata forwarding, argument forwarding, and wrapper child exit behavior.
+
+## Remaining next steps
+- Validate real `terminal-notifier` click behavior end-to-end in macOS Notification Center.
+- Validate exact focus behavior in Terminal.app and iTerm2.
+- Improve transcript-tail summaries beyond conservative line compaction.
+- Add config editing commands instead of requiring manual JSON edits.
+- Decide whether the install command should write/merge user files or remain print-only for beta.
+
 ## Current status
 - Refreshed on 2026-04-15 after initializing the Codex Beacon MVP scaffold.
 - The repo now contains:
