@@ -1,3 +1,20 @@
+# April 15, 2026 notification click fix
+
+## What changed
+- Notification click actions now execute an absolute command:
+  - Node executable from `process.execPath`
+  - current built `dist/cli.js`
+  - `focus --session-id <id>`
+- The notification command no longer mixes `terminal-notifier` `-execute` with `-activate`; click handling now routes through Beacon's focus command only.
+- Transcript summarization now parses Codex JSONL response items and extracts assistant `output_text` instead of compacting raw JSON into the notification body.
+- VS Code and Cursor integrated terminals now have app-level focus fallbacks. Exact integrated-terminal selection is still not implemented.
+
+## Custom notifier direction
+- `terminal-notifier` is still useful as a short-term transport, but its banner UI is constrained by macOS and by the tool's app identity.
+- A first-party notifier should be a small native macOS helper that receives daemon events over the existing local IPC boundary and owns notification delivery/click callbacks.
+- A custom macOS notification helper can improve app identity, icon, click reliability, and packaging. It cannot fully redesign the standard macOS notification banner.
+- A fully custom overlay or menu-bar UI is possible later, but it is a larger app surface than replacing `terminal-notifier`.
+
 # April 15, 2026 continuation update
 
 ## What changed

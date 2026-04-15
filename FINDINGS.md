@@ -1,3 +1,18 @@
+# April 15, 2026 notification click findings
+
+## Screenshot findings
+- The reported notification showed raw Codex transcript JSON in the body, which means the transcript summarizer was selecting the latest assistant-ish JSON line but not parsing it.
+- The screenshots show a VS Code integrated terminal. The original MVP focus path targeted Terminal.app and iTerm2 only, so exact VS Code terminal focus was outside the implemented focus model.
+- The click command used `codex-beacon` by name. macOS notification click actions can run in a sparse environment where npm-linked binaries are not on `PATH`, so the click could fail before Beacon focus code ran.
+- Passing both `-execute` and `-activate` to `terminal-notifier` is fragile for this product because Beacon needs click handling to run its own focus command.
+
+## Product findings
+- Using `terminal-notifier` means the notification will always look like a standard macOS notification from that transport/app identity. Beacon can improve title, body, icon, and sound, but not redesign the banner.
+- A native helper is a moderate next step, not a rewrite of the whole daemon. The clean shape is:
+  - Node daemon keeps registry, hook IPC, and summary logic
+  - native macOS helper owns notification presentation and click callbacks
+  - daemon and helper communicate over local IPC
+
 # April 15, 2026 continuation findings
 
 ## Implementation findings

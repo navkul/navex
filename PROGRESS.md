@@ -1,3 +1,25 @@
+## Refreshed on 2026-04-15 after notification click fix
+
+## Completed now
+- Fixed notification click commands to use absolute `node` and `dist/cli.js` paths instead of relying on `codex-beacon` being available in the click-time `PATH`.
+- Removed mixed `-execute` and `-activate` notification arguments so clicks route through Beacon focus logic.
+- Added structured transcript parsing for Codex JSONL assistant messages so notifications show assistant text instead of raw JSON.
+- Added app-level focus fallbacks for VS Code and Cursor integrated terminals.
+
+## Validation
+- `npm run check`
+- `npm run build`
+- Fake-notifier daemon smoke flow verified:
+  - notification body is extracted assistant text
+  - click command is absolute
+  - notification removal still uses the same session group
+  - VS Code terminal metadata persists in the registry
+
+## Remaining next steps
+- Retest a real VS Code integrated-terminal session after rebuilding and relinking.
+- Validate real Terminal.app and iTerm2 exact focus from Notification Center.
+- Decide whether to build a native macOS notification helper for better app identity and click reliability.
+
 ## Refreshed on 2026-04-15 after wrapper and focus continuation
 
 ## Completed now
