@@ -1,3 +1,42 @@
+# April 16, 2026 overlay polish and summary controls
+
+## What changed
+- Beacon now has a real config surface for overlay behavior:
+  - `overlayWidth`
+  - `overlayMaxVisibleRows`
+  - `overlayShowSummary`
+  - `overlaySummaryStyle`
+  - `overlaySummaryMaxChars`
+  - `overlaySummaryMaxWords`
+  - `overlaySummaryMaxLines`
+  - `overlayCommand`
+- The CLI now exposes config management commands:
+  - `codex-beacon config path`
+  - `codex-beacon config show`
+  - `codex-beacon config get <key>`
+  - `codex-beacon config set <key> <value>`
+- The summary path is now a structured local pipeline instead of a raw transcript tail truncation:
+  1. parse assistant messages from the Codex JSONL transcript tail
+  2. normalize markdown and inline formatting
+  3. classify the turn into a state such as `done`, `blocked`, `failed`, `needs-input`, or `ready`
+  4. build a short deterministic summary using heuristics
+  5. apply word and character limits from config
+- The overlay helper now receives presentation settings and summary state in each `show` event.
+
+## Focus reliability change
+- iTerm targeting now captures and persists the session `unique id` plus tab index at launch.
+- Focus attempts now prefer iTerm session `unique id`, then tty, then window plus tab, then window, then app activation.
+- This is intended to avoid landing in the wrong iTerm window when multiple windows or panes are open.
+
+## Overlay behavior change
+- Clicking a row now launches the focus command and hides the overlay, but it does not remove the row immediately.
+- The row stays present until `UserPromptSubmit` clears it, which makes failed or partial focus attempts recoverable.
+- The Swift overlay layout was redesigned around:
+  - row-first click targets
+  - no visible generic button label
+  - softer visual treatment with a compact header and state dot
+  - configurable width and summary line clamp
+
 # April 15, 2026 custom overlay architecture
 
 ## Direction change

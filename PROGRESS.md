@@ -1,3 +1,29 @@
+## Refreshed on 2026-04-16 after overlay polish and config controls
+
+## Completed now
+- Added CLI-managed overlay settings for width, row count, summary visibility, summary style, and summary word/character/line limits.
+- Improved transcript summarization so Beacon now prefers meaningful assistant text over generic fragments like `Done.`.
+- Added summary state classification and passed that state into the overlay for row styling.
+- Fixed the visible `Button` artifact in the Swift overlay.
+- Redesigned the overlay into a cleaner row-first panel with a more restrained visual treatment.
+- Captured iTerm session `unique id` and tab index at launch and used them for higher-confidence focus targeting.
+- Changed row click behavior so the overlay hides on click but the row only clears when the session actually becomes active again.
+
+## Validation
+- `npm run check`
+- `npm run build`
+- `codex-beacon config show|get|set` against a temporary config root
+- Fake-overlay daemon smoke flow verified:
+  - `show` events include presentation config and summary state
+  - summary falls back from a generic latest message to an older meaningful assistant message
+  - iTerm metadata persists `terminalTabIndex` and `terminalSessionUniqueId`
+  - `clear` still removes the waiting row through daemon state
+
+## Remaining next steps
+- Validate the new overlay visuals in a real session and tune spacing if needed after live use.
+- Confirm the iTerm `unique id` focus path on a real multi-window or split-pane workflow.
+- Consider whether Beacon should eventually distinguish `summary style` from `state label` more explicitly in the UI.
+
 ## Refreshed on 2026-04-15 after custom overlay refactor
 
 ## Completed now

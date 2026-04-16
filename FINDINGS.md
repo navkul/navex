@@ -1,3 +1,23 @@
+# April 16, 2026 summary and focus findings
+
+## Summary findings
+- The most reliable local summary source is still the latest meaningful assistant text in the Codex transcript JSONL, not tool logs or shell output.
+- A good local summary for Beacon should be deterministic and cheap:
+  - parse the latest assistant message
+  - skip generic fragments like `Done.`
+  - classify the turn state
+  - prefer the strongest action-oriented sentence or bullet
+  - apply whole-word truncation afterward
+- This keeps the stop hook fast because all real work still happens in the daemon, and it avoids adding API calls, latency, or another model dependency to generate overlay copy.
+
+## Focus findings
+- iTerm2 exposes a session `unique id`, a tab `index`, and a window `id` in its AppleScript model, which is a better focus target than tty alone for split panes and multiple windows. Source: https://iterm2.com/documentation-scripting.html
+- When the overlay removed a row immediately on click, a mis-focus looked like the session had disappeared. Keeping the row until the next `UserPromptSubmit` is a better interaction contract.
+
+## UI findings
+- The first overlay pass was functionally correct but visually generic. A slimmer header, softer background, row-first click target, and state dot produce a cleaner minimal companion surface.
+- The stray `Button` text came from the default NSButton title and is now removed by treating the button as an invisible click target rather than as visible UI copy.
+
 # April 15, 2026 custom overlay findings
 
 ## Implementation findings

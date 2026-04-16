@@ -1,5 +1,13 @@
 # Working now
 
+## Changed on 2026-04-16 overlay polish
+- overlay width, max visible rows, summary visibility, summary style, and word/char/line limits are now configurable
+- `codex-beacon config` now manages Beacon settings without hand-editing JSON
+- the summarizer now skips generic fragments and prefers a stronger assistant sentence from the current turn
+- iTerm focus uses session `unique id` and tab index in addition to tty and window id
+- clicking a row hides the overlay but leaves the row active until the session really resumes
+- the overlay visuals were redesigned to remove the visible button label and use a cleaner minimal row style
+
 ## Changed on 2026-04-15 custom overlay pivot
 - `terminal-notifier` is no longer the active notification transport
 - native Swift menu-bar and overlay helper is now the active UI direction
@@ -13,6 +21,7 @@
 - custom floating overlay with one row per waiting session
 - row click runs the Beacon focus command
 - daemon-to-helper `show` and `clear` events over stdin
+- row state dot derived from summary classification
 
 ## Changed on 2026-04-15
 - notification click commands now use absolute Node and CLI paths
@@ -31,7 +40,7 @@
 - low-latency `SessionStart`, `Stop`, and `UserPromptSubmit` hook event emission
 - `Stop` hook notification flow through the daemon
 - `UserPromptSubmit` notification clearing
-- compact transcript-tail summary fallback
+- compact transcript-tail summary fallback with smart assistant-text selection
 - config for maximum notification body characters
 - beta install path via clone, `npm install`, `npm run build`, and `npm link`
 - app-level click fallback for VS Code and Cursor integrated terminals
@@ -39,7 +48,7 @@
 ## Partially wired, needs live macOS validation
 - custom overlay visual behavior in a real Codex session
 - Terminal.app focus by TTY, then window id, then app activation
-- iTerm/iTerm2 focus by TTY, then window id, then app activation
+- iTerm/iTerm2 focus by session `unique id`, then tty, then window+tab, then window, then app activation
 - VS Code and Cursor focus only activate the app; exact integrated terminal selection is not yet implemented
 - install command prints a safer shell wrapper and hook instructions but does not yet edit user files directly
 
@@ -50,7 +59,6 @@
   - needs approval
   - test failure
 - installer checks for Swift toolchain, Codex hooks config, and existing shell snippets
-- config editing commands for notification settings
 - real overlay and terminal focus validation notes
 - overlay polish:
   - row hover and selected states
