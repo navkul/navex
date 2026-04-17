@@ -109,6 +109,11 @@ codex-beacon config set overlaySummaryMaxWords 18
 codex-beacon config set overlaySummaryMaxChars 140
 ```
 
-The current focus path is best effort: it tries to match Terminal.app by tty and window id, and iTerm2 by session unique id, tty, window plus tab, and window id before falling back to app activation. VS Code and Cursor integrated terminals currently get app-level focus only.
+The current focus path is strict for terminal-backed sessions:
+
+- Terminal.app: tty, then window id
+- iTerm2: session unique id, then tty, then window plus tab, then window id
+
+Beacon now fails closed when a recorded terminal target cannot be found live. It no longer treats a successful AppleScript run as proof that the original session was located. VS Code and Cursor integrated terminals still use app-level focus only.
 
 The active UI direction is a custom local menu-bar and overlay helper built from [macos/CodexBeaconOverlay.swift](/Users/arnavkulkarni/Developer/codex-beacon/macos/CodexBeaconOverlay.swift). It is intended for clone-plus-link use first; Mac App Store packaging is not required for the current workflow.

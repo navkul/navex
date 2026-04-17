@@ -1,5 +1,11 @@
 # Working now
 
+## Changed on 2026-04-17 focus reliability hardening
+- iTerm session identity now falls back to `ITERM_SESSION_ID` or `TERM_SESSION_ID` instead of depending only on AppleScript launch capture
+- `SessionStart` now backfills terminal app and iTerm session identity from the shell environment when wrapper metadata is missing
+- exact terminal focus now only succeeds on a real match instead of treating a successful AppleScript run as success
+- terminal-backed sessions now fail closed when the original live target cannot be found
+
 ## Changed on 2026-04-17 overlay interaction tweaks
 - overflow rows now scroll instead of being hidden
 - clicking a row removes it from the overlay immediately
@@ -52,8 +58,8 @@
 
 ## Partially wired, needs live macOS validation
 - custom overlay visual behavior in a real Codex session
-- Terminal.app focus by TTY, then window id, then app activation
-- iTerm/iTerm2 focus by session `unique id`, then tty, then window+tab, then window, then app activation
+- Terminal.app focus by TTY, then window id, with hard failure if no live match is found
+- iTerm/iTerm2 focus by session `unique id`, then tty, then window+tab, then window, with hard failure if no live match is found
 - VS Code and Cursor focus only activate the app; exact integrated terminal selection is not yet implemented
 - install command prints a safer shell wrapper and hook instructions but does not yet edit user files directly
 

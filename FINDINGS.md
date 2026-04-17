@@ -1,3 +1,17 @@
+# April 17, 2026 focus reliability findings
+
+## Focus findings
+- The main focus bug was not the matching order. It was that the AppleScript selectors returned success when the script executed, even when no window, tab, or session matched the requested target.
+- That false-positive success path explains the inconsistent user experience: Beacon could report a successful click path while landing in the wrong iTerm window or falling through into a different terminal app later.
+- iTerm already exposes a strong session identity in the shell environment through `ITERM_SESSION_ID` and `TERM_SESSION_ID`. Parsing the trailing `unique id` from those variables is cheaper and more reliable than depending only on launch-time AppleScript capture.
+- When terminal metadata exists but the target cannot be found live, the right behavior is to fail closed rather than activate some other terminal window. Wrong-window focus is worse than an explicit miss for this product.
+
+## Validation findings
+- Live local focus harness checks against three open iTerm windows confirmed:
+  - exact focus by iTerm `unique id`
+  - fallback focus by tty when app metadata is missing
+  - non-matching iTerm targets now fail with an error instead of silently selecting another window
+
 # April 17, 2026 overlay list findings
 
 ## UI findings

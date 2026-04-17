@@ -1,3 +1,29 @@
+## Refreshed on 2026-04-17 after focus reliability hardening
+
+## Completed now
+- Fixed the iTerm launch metadata path so new sessions can recover the session `unique id` from shell environment variables.
+- Added `SessionStart` metadata fallbacks for `TERM_PROGRAM`, `ITERM_SESSION_ID`, and `TERM_SESSION_ID`.
+- Corrected the core focus resolver so exact terminal focus only reports success when a matching session or window is actually found.
+- Changed terminal focus behavior to fail closed instead of activating the wrong terminal app or wrong iTerm window.
+
+## Validation
+- `npm run check`
+- `npm run build`
+- Live iTerm harness validation against open windows verified:
+  - exact focus by session `unique id`
+  - fallback focus by tty when app metadata is missing
+  - explicit failure for bogus iTerm targets instead of false-positive success
+- Temporary daemon plus `SessionStart` hook harness verified that `TERM_PROGRAM` and `TERM_SESSION_ID` backfill `terminalApp` and `terminalSessionUniqueId` into the registry when wrapper metadata is absent.
+- Fake Codex launch smoke flow verified wrapper-exported iTerm metadata still includes:
+  - terminal app
+  - window id
+  - tab index
+  - session `unique id`
+
+## Remaining next steps
+- Validate the exact focus path through the real overlay click flow, not just the direct CLI focus command.
+- Decide whether failed focus from the overlay should surface a visible error or simply leave the session recoverable through the menu bar.
+
 ## Refreshed on 2026-04-17 after overlay interaction tweaks
 
 ## Completed now

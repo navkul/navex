@@ -1,3 +1,17 @@
+# April 17, 2026 focus reliability pass
+
+## What changed
+- Launch-time iTerm metadata capture now derives the session `unique id` from `ITERM_SESSION_ID` or `TERM_SESSION_ID` when available, instead of relying only on AppleScript capture.
+- The `SessionStart` hook now falls back to `TERM_PROGRAM` plus the iTerm session environment variables when wrapper-provided metadata is missing. This keeps new iTerm sessions focusable even if they were not launched through a perfect wrapper path.
+- The focus resolver now treats exact terminal selection as a strict match:
+  - iTerm/iTerm2: session `unique id`, then tty, then window plus tab, then window
+  - Terminal.app: tty, then window
+- Exact terminal focus now fails closed. Beacon no longer treats a successful AppleScript process exit as proof that the target session was found.
+
+## Current behavior
+- For terminal-backed sessions, Beacon now prefers a hard failure over activating the wrong terminal window.
+- VS Code and Cursor remain app-level fallbacks only because there is still no stable exact integrated-terminal selector in this repo.
+
 # April 17, 2026 overlay interaction pass
 
 ## What changed
