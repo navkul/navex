@@ -1,3 +1,11 @@
+# April 17, 2026 overlay list findings
+
+## UI findings
+- Hiding rows beyond the height cap was the wrong interaction model for a menu-bar queue because the menu-bar count and the visible rows could diverge.
+- A scroll container is the right fix here because the user still needs a compact top-right surface, but all waiting sessions must remain reachable.
+- Row click should remove the visible overlay item immediately. The user expectation is closer to dismissing a notification than to preserving a retry surface.
+- A tiny row-level dismiss affordance is enough for this surface; a larger secondary button would make the overlay feel heavier than it needs to.
+
 # April 16, 2026 summary and focus findings
 
 ## Summary findings

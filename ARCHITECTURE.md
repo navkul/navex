@@ -1,3 +1,15 @@
+# April 17, 2026 overlay interaction pass
+
+## What changed
+- The overlay list now renders all waiting sessions inside a scroll view instead of truncating the visible list at `overlayMaxVisibleRows`.
+- `overlayMaxVisibleRows` now controls panel height, not data visibility. Extra rows remain available via scroll.
+- Clicking a row now removes it from the overlay immediately and closes the panel.
+- Each row now includes a small dismiss affordance so a user can clear it without focusing the session.
+
+## Current behavior
+- Overlay dismissal is still helper-local state. Clearing a row from the overlay does not change the underlying session registry status.
+- A dismissed row will stay gone until a future daemon `show` event reintroduces it or the helper restarts.
+
 # April 16, 2026 overlay polish and summary controls
 
 ## What changed

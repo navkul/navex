@@ -1,3 +1,18 @@
+## Refreshed on 2026-04-17 after overlay interaction tweaks
+
+## Completed now
+- Added scrollable overflow to the overlay so all waiting sessions stay reachable even when the panel height is capped.
+- Changed row click to remove the overlay item immediately instead of waiting for a later clear event.
+- Added a small dismiss control for removing a waiting item without focusing its session.
+
+## Validation
+- `npm run check`
+- `npm run build`
+- Verified the Swift helper still compiles after the scroll-view and row-dismiss changes.
+
+## Remaining next steps
+- Investigate and harden return-to-session reliability, with focus correctness as the top priority.
+
 ## Refreshed on 2026-04-16 after overlay polish and config controls
 
 ## Completed now

@@ -1,5 +1,10 @@
 # Working now
 
+## Changed on 2026-04-17 overlay interaction tweaks
+- overflow rows now scroll instead of being hidden
+- clicking a row removes it from the overlay immediately
+- each row now has a small dismiss affordance for clearing it without focusing
+
 ## Changed on 2026-04-16 overlay polish
 - overlay width, max visible rows, summary visibility, summary style, and word/char/line limits are now configurable
 - `codex-beacon config` now manages Beacon settings without hand-editing JSON
