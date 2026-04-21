@@ -1,5 +1,11 @@
 # Working now
 
+## Changed on 2026-04-21 overlay bootstrap visibility fix
+- the helper now bootstraps directly from `overlay-snapshot.json` instead of waiting for stdin `show` events to paint the first overlay state
+- helper startup now writes visibility diagnostics to `~/.codex-beacon/overlay-helper.log`
+- overlay placement now targets the current mouse screen and active space before ordering the panel
+- the overlay visibility path has been validated through the live macOS window list, not just by inspecting Beacon state files
+
 ## Changed on 2026-04-21 overlay snapshot recovery
 - the daemon now persists the current overlay model in `overlay-snapshot.json`
 - the helper reloads waiting sessions from the persisted overlay snapshot

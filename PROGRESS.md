@@ -1,3 +1,29 @@
+## Refreshed on 2026-04-21 after overlay bootstrap visibility fix
+
+## Completed now
+- Moved the Swift helper to bootstrap its waiting-session state directly from `overlay-snapshot.json` during startup.
+- Simplified daemon-to-helper coordination so the helper no longer depends on stdin event delivery to paint the first visible overlay state.
+- Added helper-side visibility logging in `~/.codex-beacon/overlay-helper.log`.
+- Adjusted overlay placement to target the screen under the current mouse location and verified the live panel is being ordered onscreen with the expected non-default frame.
+
+## Validation
+- `npm run check`
+- `npm run build`
+- killed and restarted the daemon/helper
+- triggered a real `Stop` hook path through `node dist/cli.js hook stop`
+- confirmed the helper log records:
+  - `applySnapshot reason=bootstrap`
+  - `layoutPanel frame={{1032, 368}, {420, 532}}`
+  - `showOverlay visibleAfter=true`
+- confirmed via `CGWindowListCopyWindowInfo` that the overlay window is onscreen with:
+  - width `420`
+  - height `532`
+  - `kCGWindowIsOnscreen = 1`
+
+## Remaining next steps
+- Retest the live overlay visually from a real Codex stop event in your normal terminal workflow.
+- If duplicate daemons/helpers appear again, harden the daemon startup race in `sendEvent()`.
+
 ## Refreshed on 2026-04-21 after overlay snapshot recovery
 
 ## Completed now

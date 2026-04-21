@@ -1,3 +1,17 @@
+# April 21, 2026 overlay bootstrap and visibility recovery
+
+## What changed
+- The Swift helper now bootstraps its waiting-session model from `overlay-snapshot.json` during initialization instead of depending on stdin-delivered `show` events to render the first visible state.
+- The daemon still owns the rendered overlay model and persists it on every `show` and `clear`, but helper startup no longer depends on a live event stream to become visible.
+- The helper still polls the snapshot file for changes, which is now the primary synchronization path.
+- Helper placement now targets the screen under the current mouse location and moves the panel into the active space before ordering it on screen.
+- Beacon now writes helper-side visibility logs to `~/.codex-beacon/overlay-helper.log` for AppKit startup debugging.
+
+## Current behavior
+- After a daemon/helper restart, the helper can immediately render existing waiting sessions from disk.
+- Overlay visibility is no longer coupled to stdin pipe timing between the daemon and the helper process.
+- The helper log now records snapshot bootstrap, panel layout frame, and show attempts.
+
 # April 21, 2026 overlay snapshot recovery
 
 ## What changed

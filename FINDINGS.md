@@ -1,3 +1,14 @@
+# April 21, 2026 overlay visibility findings
+
+## Visibility findings
+- The helper process was launching, but it could still come up with only the default empty `384x180` panel state if initial UI hydration depended on runtime event delivery.
+- Persisted overlay snapshot state is not enough by itself; the helper has to bootstrap directly from that snapshot before the first UI refresh if Beacon wants reliable restart recovery.
+- Querying the live macOS window list was the decisive check here:
+  - the helper had windows
+  - the panel was initially stuck at its default frame
+  - after bootstrap hydration, the panel moved to the expected `420x532` onscreen frame
+- A snapshot-driven helper is a better fit than stdin-driven incremental UI for this product. The daemon already renders the current model; the helper only needs to display that model reliably.
+
 # April 21, 2026 overlay recovery findings
 
 ## Recovery findings
