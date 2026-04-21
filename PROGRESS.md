@@ -1,3 +1,24 @@
+## Refreshed on 2026-04-21 after overlay window anchoring fix
+
+## Completed now
+- Replaced the failing panel/popover presentation path with a plain borderless helper window anchored under the `Beacon` status item.
+- Kept the existing overlay row UI, scroll behavior, dismiss control, drag ordering, usage meter, and inline reprompt support.
+- Confirmed the helper completes its render path and orders the overlay above the active desktop.
+
+## Validation
+- `npm run check`
+- `npm run build`
+- restarted the daemon/helper through the real `Stop` hook path
+- verified helper logs complete through:
+  - `refresh end arranged=...`
+  - `showOverlay visibleAfter=true`
+- verified a full-screen compositor capture now shows the overlay on top of the active app
+- verified direct window capture still contains the expected queue UI
+
+## Remaining next steps
+- Retest the visible overlay directly from a real Codex session on your machine.
+- Once confirmed, strip the extra helper-debug logging back to a smaller default set.
+
 ## Refreshed on 2026-04-21 after overlay bootstrap visibility fix
 
 ## Completed now

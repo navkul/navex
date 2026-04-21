@@ -1,5 +1,10 @@
 # Working now
 
+## Changed on 2026-04-21 overlay window anchoring fix
+- the queue now renders in a plain borderless helper window anchored under the `Beacon` menu-bar item
+- the helper window now joins all spaces and is explicitly ordered above the active desktop
+- the visible overlay has been verified in a real full-screen compositor capture, not only through direct window capture
+
 ## Changed on 2026-04-21 overlay bootstrap visibility fix
 - the helper now bootstraps directly from `overlay-snapshot.json` instead of waiting for stdin `show` events to paint the first overlay state
 - helper startup now writes visibility diagnostics to `~/.codex-beacon/overlay-helper.log`

@@ -1,3 +1,13 @@
+# April 21, 2026 overlay surface findings
+
+## Surface findings
+- The helper was correctly rendering queue content into its own window, but the `NSPanel`/`NSPopover` variants were still not reliably visible above the active desktop in real compositor captures.
+- Direct window capture was the decisive check:
+  - the queue UI itself was correct
+  - the failure was the presentation surface, not the row rendering path
+- Anchoring a plain borderless `NSWindow` under the status item is more reliable here than continuing to fight `NSPanel`/`NSPopover` behavior in this standalone helper.
+- Using the status-item button rect as the anchor gives Beacon a concrete screen-space source of truth and avoids guessing with screen selection alone.
+
 # April 21, 2026 overlay visibility findings
 
 ## Visibility findings

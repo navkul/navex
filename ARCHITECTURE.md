@@ -1,3 +1,18 @@
+# April 21, 2026 overlay window anchoring fix
+
+## What changed
+- Beacon no longer relies on an `NSPanel` or `NSPopover` for the visible queue surface.
+- The helper now renders the queue into a plain borderless `NSWindow` anchored under the `Beacon` status item.
+- The helper layout path is now manual and deterministic:
+  - size the root view from Beacon presentation state
+  - position the overlay window from the status-item button screen rect
+  - order the window front with `makeKeyAndOrderFront` plus `orderFrontRegardless`
+- The overlay window now joins all spaces and can move to the active space.
+
+## Current behavior
+- The queue can render as a real topmost helper window on the active desktop instead of only existing in the window server.
+- Beacon still uses the same daemon, snapshot, summary, usage, focus, dismiss, reorder, and inline-reprompt model; only the visible macOS surface changed.
+
 # April 21, 2026 overlay bootstrap and visibility recovery
 
 ## What changed
