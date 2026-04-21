@@ -1,3 +1,19 @@
+## Refreshed on 2026-04-21 after overlay snapshot recovery
+
+## Completed now
+- Added persisted `overlay-snapshot.json` state so the daemon writes the current waiting-session overlay model to disk.
+- Made the Swift helper poll and reload the overlay snapshot instead of relying only on incremental stdin events.
+- Added daemon-start replay of all waiting sessions so Beacon can repopulate the overlay after a daemon/helper restart.
+
+## Validation
+- `npm run check`
+- `npm run build`
+- Restarted Beacon and verified `~/.codex-beacon/overlay-snapshot.json` is recreated from existing waiting sessions.
+- Verified the snapshot contains current focus commands, reprompt commands, summaries, and usage state for waiting sessions.
+
+## Remaining next steps
+- Confirm the recovered snapshot is visibly rendered by the live overlay on your machine after restart.
+
 ## Refreshed on 2026-04-21 after overlay ordering, usage, and reprompt
 
 ## Completed now

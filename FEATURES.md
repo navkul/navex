@@ -1,5 +1,10 @@
 # Working now
 
+## Changed on 2026-04-21 overlay snapshot recovery
+- the daemon now persists the current overlay model in `overlay-snapshot.json`
+- the helper reloads waiting sessions from the persisted overlay snapshot
+- daemon startup replays waiting sessions so overlay state can recover after Beacon restarts
+
 ## Changed on 2026-04-21 overlay queue controls
 - waiting rows can now be reordered by drag handle instead of staying alphabetic
 - the overlay keeps a helper-local waiting-row order in `overlay-state.json`

@@ -1,3 +1,14 @@
+# April 21, 2026 overlay snapshot recovery
+
+## What changed
+- The daemon now persists the current overlay model to `overlay-snapshot.json` on every `show` and `clear`.
+- The Swift helper now polls that snapshot file and rebuilds its waiting-session state from disk.
+- Daemon startup also replays all waiting sessions into the snapshot so the overlay can recover after Beacon restarts.
+
+## Current behavior
+- Beacon no longer depends on helper-local in-memory state alone to show waiting sessions.
+- Restarting the daemon/helper should repopulate the overlay from the persisted waiting-session snapshot.
+
 # April 21, 2026 overlay ordering and inline reprompt
 
 ## What changed

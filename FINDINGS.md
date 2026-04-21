@@ -1,3 +1,10 @@
+# April 21, 2026 overlay recovery findings
+
+## Recovery findings
+- The prior overlay design was too dependent on a live helper process ingesting incremental events over stdin. If the helper restarted or lost its in-memory state, Beacon could keep tracking waiting sessions in the registry while showing nothing on screen.
+- A persisted overlay snapshot is the right recovery layer here because the helper UI only needs the daemon's latest rendered model, not the full event history.
+- Replaying waiting sessions from the registry on daemon startup closes the gap between on-disk session truth and helper-local UI truth.
+
 # April 21, 2026 overlay queue and reprompt findings
 
 ## UI findings
