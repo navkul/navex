@@ -22,7 +22,7 @@ It tracks open interactive Codex sessions, assigns each one a stable display nam
 - a thin shell wrapper launches Codex and injects session metadata into the environment
 - Codex hooks emit tiny JSON events on `SessionStart`, `UserPromptSubmit`, and `Stop`
 - a background daemon receives hook events over a local Unix socket
-- the daemon updates session state, persists the rendered overlay model, and ensures a native Swift menu-bar overlay helper is running
+- the daemon updates session state, persists the rendered overlay model, and ensures a native Swift menu-bar helper window is running
 - overlay row clicks run a local focus command that re-activates the terminal app and window
 
 The hook path should do no heavy work. It should enqueue and return.
@@ -121,6 +121,8 @@ The overlay now also carries:
 Beacon now persists the rendered overlay model in `~/.codex-beacon/overlay-snapshot.json`, so restarting the daemon/helper can repopulate current waiting sessions instead of coming back empty.
 
 The helper now bootstraps directly from that persisted snapshot on startup. It no longer depends on live stdin event timing to render the first visible overlay state after a restart.
+
+The visible macOS surface is currently a plain borderless helper window anchored under the `Beacon` status item. That path replaced the earlier panel/popover variants because it was materially more reliable in real compositor captures.
 
 If you need to debug helper visibility, inspect:
 
