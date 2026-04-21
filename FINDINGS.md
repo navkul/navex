@@ -1,3 +1,19 @@
+# April 21, 2026 overlay queue and reprompt findings
+
+## UI findings
+- Drag ordering and inline text entry both require the row to own its own mouse behavior. The old full-row invisible button model was too brittle once the row needed a text field, a dismiss target, and a reorder gesture.
+- Persisting only the waiting-session order is enough for this helper. The ordering concern is local UI state, not daemon state, so it belongs in a small helper-owned JSON file rather than in the session registry.
+- A compact battery visualization is the cleanest way to surface rate-limit state without adding more text to every row. The primary five-hour percent can carry the main fill, with a thinner weekly track underneath.
+
+## Usage findings
+- Codex session transcripts already include the current rate-limit snapshot in `event_msg` payloads of type `token_count`.
+- That snapshot is account-level, not a mathematically exact per-session attribution. The helper should present it as the latest usage state observed by that session, not claim that the percent was consumed only by that session.
+
+## Reprompt findings
+- iTerm2 can accept an unfocused inline reprompt through AppleScript `write text` when Beacon can match the live session by unique id, tty, or window metadata.
+- Terminal.app can accept an unfocused inline reprompt through AppleScript `do script ... in candidateTab` for a matched tab or selected tab of a matched window.
+- This makes inline reprompt feasible without stealing focus or switching desktops for the two terminal apps Beacon already targets.
+
 # April 17, 2026 focus reliability findings
 
 ## Focus findings

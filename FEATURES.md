@@ -1,5 +1,12 @@
 # Working now
 
+## Changed on 2026-04-21 overlay queue controls
+- waiting rows can now be reordered by drag handle instead of staying alphabetic
+- the overlay keeps a helper-local waiting-row order in `overlay-state.json`
+- each row now includes a compact inline reprompt field
+- each row now includes a minimalist usage meter driven by the latest transcript rate-limit snapshot
+- inline reprompt is supported for iTerm/iTerm2 and Terminal.app sessions
+
 ## Changed on 2026-04-17 focus reliability hardening
 - iTerm session identity now falls back to `ITERM_SESSION_ID` or `TERM_SESSION_ID` instead of depending only on AppleScript launch capture
 - `SessionStart` now backfills terminal app and iTerm session identity from the shell environment when wrapper metadata is missing
@@ -33,6 +40,9 @@
 - row click runs the Beacon focus command
 - daemon-to-helper `show` and `clear` events over stdin
 - row state dot derived from summary classification
+- drag handle for row ordering
+- inline reprompt field for supported terminal sessions
+- compact five-hour plus weekly usage meter
 
 ## Changed on 2026-04-15
 - notification click commands now use absolute Node and CLI paths
@@ -58,9 +68,12 @@
 
 ## Partially wired, needs live macOS validation
 - custom overlay visual behavior in a real Codex session
+- custom row ordering persistence across helper relaunch in real use
+- inline reprompt field feel and text-entry behavior in the real overlay
 - Terminal.app focus by TTY, then window id, with hard failure if no live match is found
 - iTerm/iTerm2 focus by session `unique id`, then tty, then window+tab, then window, with hard failure if no live match is found
 - VS Code and Cursor focus only activate the app; exact integrated terminal selection is not yet implemented
+- VS Code and Cursor do not yet support inline reprompt
 - install command prints a safer shell wrapper and hook instructions but does not yet edit user files directly
 
 ## Still to harden

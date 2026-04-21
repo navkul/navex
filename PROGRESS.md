@@ -1,3 +1,31 @@
+## Refreshed on 2026-04-21 after overlay ordering, usage, and reprompt
+
+## Completed now
+- Replaced the old full-row click implementation with row views that support:
+  - drag-to-reorder
+  - dismiss
+  - inline reprompt
+- Added helper-local `overlay-state.json` ordering support so waiting rows can keep a custom order.
+- Added transcript-derived usage parsing for:
+  - five-hour rate-limit usage
+  - weekly rate-limit usage
+  - total session tokens
+  - last-turn tokens
+- Added `codex-beacon reprompt --session-id ... --message ...` and wired the helper to call it from an inline text field.
+- Added terminal-backed reprompt delivery for iTerm/iTerm2 and Terminal.app without focusing the destination session.
+
+## Validation
+- `npm run check`
+- `npm run build`
+- Live CLI reprompt harnesses verified:
+  - iTerm/iTerm2 delivery into a matched session unique id
+  - Terminal.app delivery into a matched window/tab
+- `usageSnapshotFromTranscript()` returns the latest primary and secondary rate-limit snapshot from a real Codex transcript.
+
+## Remaining next steps
+- Visually inspect the new row layout, drag feel, and inline reprompt field in the real overlay.
+- Confirm helper-local row ordering persists after a real helper relaunch, not just in code flow.
+
 ## Refreshed on 2026-04-17 after focus reliability hardening
 
 ## Completed now

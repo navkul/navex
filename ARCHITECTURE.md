@@ -1,3 +1,26 @@
+# April 21, 2026 overlay ordering and inline reprompt
+
+## What changed
+- The Swift helper now owns lightweight local UI state in `overlay-state.json` for waiting-row order. New waiting sessions are inserted at the top by default, and drag reordering updates that local order.
+- Overlay rows are no longer a single invisible button. Each row now owns:
+  - a drag handle for reordering
+  - a compact dismiss affordance
+  - a transcript-derived usage meter
+  - an inline reprompt field
+- Stop processing now captures the latest Codex rate-limit snapshot from the session transcript:
+  - primary five-hour usage percent
+  - secondary weekly usage percent
+  - total session tokens
+  - last-turn tokens
+- The daemon forwards that usage snapshot to the helper alongside the summary and focus command.
+- The helper now receives a reprompt command prefix and can submit a one-line prompt back into the live terminal session without focusing it.
+
+## Current behavior
+- Inline reprompt is currently terminal-backed only:
+  - iTerm/iTerm2 via `write text` against the matched session
+  - Terminal.app via `do script` against the matched tab or window
+- VS Code and Cursor sessions still do not get inline reprompt because this repo does not have a reliable exact integrated-terminal input path for them.
+
 # April 17, 2026 focus reliability pass
 
 ## What changed
