@@ -126,6 +126,8 @@ The visible macOS surface is currently a plain borderless helper window anchored
 
 The helper also no longer sets custom borderless-window `collectionBehavior` flags during startup. That behavior turned out to stall helper initialization on restart; the simpler window setup path is the stable one here.
 
+To keep the overlay visible outside the terminal's original desktop, Beacon now applies `canJoinAllSpaces` only when the overlay is shown. That keeps startup stable while making the queue behave more like a global menu-bar surface.
+
 If you need to debug helper visibility, inspect:
 
 ```bash
