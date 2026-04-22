@@ -1,3 +1,22 @@
+## Refreshed on 2026-04-22 after overlay row layout pass
+
+## Completed now
+- Reworked `OverlayRowView` so row content and trailing controls use separate columns.
+- Added shared row metrics for insets, spacing, and action sizing instead of relying on ad hoc per-control layout.
+- Fixed early summary wrapping by constraining the content column to the full width available to the left of the action column.
+- Updated `AGENTS.md` with an explicit UI execution standard for visual validation and iterative refinement.
+
+## Validation
+- `npm run build`
+- `npm run check`
+- reviewed the rebuilt overlay layout against the reported issues:
+  - short summaries no longer wrap prematurely
+  - row content uses even top and bottom spacing
+  - trailing controls stay aligned in a stable column
+
+## Remaining next steps
+- Retest the rebuilt row layout in your live queue and tune only if a real screen still exposes a spacing edge case not covered by the new column layout.
+
 ## Refreshed on 2026-04-22 after overlay control pass
 
 ## Completed now

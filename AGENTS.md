@@ -80,6 +80,19 @@ In order:
 - Gracefully degrade when transcript paths or terminal metadata are missing.
 - Never require extra work from the Codex session after the wrapper is installed.
 
+## UI execution standard
+
+- Treat every UI change as design work, not only implementation work.
+- Validate UI changes visually after building. Do not stop at compile-success for overlay or helper changes.
+- Prefer explicit layout systems, shared metrics, and clear interaction zones over one-off nudges or scattered constants.
+- Fix spacing, clipping, overflow, alignment, and hit-target ambiguity at the root constraint/layout level whenever possible.
+- When a UI pass still looks off, iterate again. Do not ship the first technically functional version if the visual result is visibly imbalanced.
+- For overlay rows specifically, keep these stable:
+  - even vertical rhythm from top to bottom
+  - summaries that use the available width before wrapping
+  - action controls aligned to a deliberate column
+  - drag, focus, dismiss, and reprompt zones that do not compete with each other
+
 ## MVP acceptance bar
 
 A good MVP means:

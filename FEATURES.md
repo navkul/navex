@@ -1,5 +1,11 @@
 # Working now
 
+## Changed on 2026-04-22 overlay row layout pass
+- reworked overlay rows into a dedicated content column plus a dedicated trailing action column
+- short summaries now use the full readable width before wrapping
+- row spacing now comes from shared layout metrics instead of incidental stack sizing
+- `AGENTS.md` now includes an explicit UI execution standard for visual validation and iterative refinement
+
 ## Changed on 2026-04-22 overlay control pass
 - removed full-row click-to-focus
 - added a dedicated trailing arrow button for focus under the dismiss button

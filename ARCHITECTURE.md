@@ -1,3 +1,20 @@
+# April 22, 2026 overlay row layout pass
+
+## What changed
+- The waiting-row layout now treats content and controls as separate columns instead of letting the trailing action buttons participate in content sizing.
+- `OverlayRowView` now uses a small metric set for:
+  - shared insets
+  - title spacing
+  - content spacing
+  - action-button sizing
+  - content-to-action gap
+- The content column is now width-constrained between the left inset and the dedicated action column, so summary and reprompt text use the full readable width before wrapping.
+- The action column is now a fixed trailing stack, which keeps the dismiss and focus controls visually aligned without changing row content width.
+
+## Current behavior
+- Short summaries such as `Ready for your next prompt.` can stay on one line when the row has room for them.
+- Row vertical rhythm is driven by the shared metric system rather than by whatever size the action buttons or wrapped summary happened to produce.
+
 # April 22, 2026 overlay control pass
 
 ## What changed

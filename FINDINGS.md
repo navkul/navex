@@ -1,3 +1,17 @@
+# April 22, 2026 overlay row layout findings
+
+## Layout findings
+- Letting the trailing action buttons live in the same flow as the row content made the content column underuse available width. That is why short phrases such as `Ready for your next prompt.` wrapped too early.
+- For this overlay, the right structure is:
+  - one fixed action column
+  - one width-constrained content column
+  - one shared metric set for spacing
+- Wrapping text behaves predictably only after the content column has a real width constraint. A stack view with only a trailing `<=` relation is not strong enough for this surface.
+- The cleanest fix for uneven row spacing was not a font tweak or a box-height tweak. It was making the layout model explicit so row height is a consequence of content plus shared insets.
+
+## Process findings
+- Overlay work needs a visual-quality standard in `AGENTS.md`, not only implementation rules. Compile success is not enough for UI changes in this repo.
+
 # April 22, 2026 overlay control findings
 
 ## Control findings
