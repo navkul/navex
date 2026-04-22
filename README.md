@@ -156,6 +156,8 @@ The row metric system has also been tightened so the title block and reprompt fo
 
 Beacon now also treats row balance as a perceptual spacing problem rather than forcing symmetric top and bottom padding when the footer already carries more visual weight.
 
+The helper also no longer uses a fixed row-height estimate for summary rows. Waiting cards and panel height now size from the fitted content, which lets short rows collapse instead of carrying leftover empty space.
+
 If you need to debug helper visibility, inspect:
 
 ```bash
