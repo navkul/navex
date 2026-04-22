@@ -1,3 +1,15 @@
+# April 22, 2026 overlay control findings
+
+## Control findings
+- Once rows gained dismiss, reprompt, and focus actions, making the whole row clickable for focus created too much ambiguity.
+- A dedicated focus button is the cleaner contract. It preserves the working focus path while removing accidental navigation from ordinary row interaction.
+- Dragging from the row body is a better interaction than a tiny drag handle for this surface because the row is already visually card-like and large enough to act as its own reorder target.
+- Moving the status dot to the right of the session name keeps the leading edge cleaner now that the drag handle is gone.
+
+## Typography findings
+- Removing the last `5h` prefix keeps the header usage block balanced once both lines are stacked together.
+- The tighter monospaced sizing makes the overlay feel more coherent with the usage header and reduces the oversized look of the old row titles.
+
 # April 22, 2026 overlay typography findings
 
 ## Typography findings

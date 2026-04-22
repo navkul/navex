@@ -1,3 +1,24 @@
+## Refreshed on 2026-04-22 after overlay control pass
+
+## Completed now
+- Replaced full-row focus with a dedicated trailing arrow button under the dismiss button.
+- Removed the visible drag-handle icon and made row dragging work from the row body.
+- Moved the state indicator dot to the right of the session name.
+- Removed the remaining `5h` prefix from the header usage block.
+- Tightened overlay typography toward the compact usage-header style.
+
+## Validation
+- `npm run build`
+- `npm run check`
+- captured a fresh overlay screenshot showing:
+  - trailing stacked `x` and arrow buttons
+  - no drag-handle icon
+  - status dot to the right of the session name
+  - unlabeled first and second header usage lines
+
+## Remaining next steps
+- Retest the new arrow focus button in normal live use to confirm the explicit control feels better than the old full-row focus gesture.
+
 ## Refreshed on 2026-04-22 after overlay typography pass
 
 ## Completed now

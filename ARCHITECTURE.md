@@ -1,3 +1,25 @@
+# April 22, 2026 overlay control pass
+
+## What changed
+- The overlay row is no longer the focus click target.
+- Each waiting row now exposes explicit trailing controls:
+  - `x` to dismiss
+  - arrow button to focus the terminal session
+- Drag reordering no longer depends on a dedicated handle icon. A row can now be dragged from anywhere in the row body that is not:
+  - one of the trailing action buttons
+  - the inline reprompt field
+- The state dot now renders to the right of the session name instead of to the left.
+- The remaining `5h` label was removed from the header usage block.
+- The overlay typography was tightened again around the compact monospaced system font, with sizes and weights pulled closer to the usage header style.
+
+## Current behavior
+- Focus still routes through the same Beacon focus command path as before; only the visible trigger moved from the full row surface to the dedicated arrow button.
+- The overlay now separates:
+  - drag gesture area
+  - dismiss control
+  - focus control
+  - reprompt field
+
 # April 22, 2026 overlay typography pass
 
 ## What changed

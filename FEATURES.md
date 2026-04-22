@@ -1,5 +1,13 @@
 # Working now
 
+## Changed on 2026-04-22 overlay control pass
+- removed full-row click-to-focus
+- added a dedicated trailing arrow button for focus under the dismiss button
+- removed the drag-handle icon and made rows draggable from the row body
+- moved the state dot to the right of the session name
+- removed the remaining `5h` label from the header usage block
+- tightened the overlay typography to match the usage-header style more closely
+
 ## Changed on 2026-04-22 overlay typography pass
 - switched the overlay to a monospaced system font throughout
 - removed the `wk` label from the weekly usage line
