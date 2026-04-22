@@ -1,3 +1,17 @@
+# April 22, 2026 overlay row density pass
+
+## What changed
+- The row layout metric set now distinguishes top and bottom insets instead of using one generic vertical inset.
+- Row density was tightened through the shared metrics:
+  - smaller top and bottom insets
+  - slightly tighter vertical content spacing
+  - shorter reprompt field height
+  - smaller gap between the reprompt field and underline
+
+## Current behavior
+- Waiting rows are slightly shorter overall.
+- The title block and reprompt footer now sit in a more balanced vertical frame without relying on one-off control offsets.
+
 # April 22, 2026 overlay row layout pass
 
 ## What changed

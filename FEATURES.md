@@ -1,5 +1,9 @@
 # Working now
 
+## Changed on 2026-04-22 overlay row density pass
+- tightened row height through shared top/bottom insets, content spacing, reprompt height, and underline spacing
+- rows now use a denser and more balanced vertical rhythm without per-element nudges
+
 ## Changed on 2026-04-22 overlay row layout pass
 - reworked overlay rows into a dedicated content column plus a dedicated trailing action column
 - short summaries now use the full readable width before wrapping

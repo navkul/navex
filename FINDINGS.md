@@ -1,3 +1,15 @@
+# April 22, 2026 overlay row density findings
+
+## Density findings
+- Even when the row uses the correct column structure, visual balance still depends on the vertical metric set.
+- The reprompt footer reads heavier than the title edge because it includes both placeholder text and an underline. That means equal mathematical insets do not always read as equal visual padding.
+- The clean fix is still metric-driven:
+  - tune row insets
+  - tune stack spacing
+  - tune reprompt control height
+  - tune underline spacing
+- This is a row-density problem, not a per-label alignment problem.
+
 # April 22, 2026 overlay row layout findings
 
 ## Layout findings

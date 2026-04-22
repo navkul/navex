@@ -1,3 +1,17 @@
+## Refreshed on 2026-04-22 after overlay row density pass
+
+## Completed now
+- Tightened the waiting-row vertical metric set to reduce excess card height.
+- Split the old generic vertical inset into explicit top and bottom insets.
+- Reduced reprompt-field height and underline gap so the footer sits more cleanly inside the row.
+
+## Validation
+- `npm run build`
+- `npm run check`
+
+## Remaining next steps
+- Recheck the live overlay on your screen and only tune again if a real row still reads bottom-heavy after the density pass.
+
 ## Refreshed on 2026-04-22 after overlay row layout pass
 
 ## Completed now
