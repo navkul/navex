@@ -1,3 +1,23 @@
+## Refreshed on 2026-04-22 after overlay space visibility fix
+
+## Completed now
+- Moved overlay space handling out of startup and into the show path.
+- The helper now applies `canJoinAllSpaces` immediately before showing the overlay.
+- Added active-space logging around show operations so Beacon can confirm the overlay is visible on the current desktop.
+
+## Validation
+- `npm run build`
+- killed and restarted the daemon/helper
+- triggered a real `Stop` hook path through `node dist/cli.js hook stop`
+- confirmed helper logs now show:
+  - `showOverlay reason=... activeSpaceBefore=true`
+  - `showOverlay visibleAfter=true activeSpaceAfter=true`
+- confirmed the helper still completes startup without stalling in `configurePanel()`
+
+## Remaining next steps
+- Have the user retest from a non-terminal desktop or space with the new build.
+- If a specific full-screen or Stage Manager mode still pins the overlay to the wrong context, add a narrower show-time fallback for that display mode instead of moving behavior setup back into startup.
+
 ## Refreshed on 2026-04-22 after helper window startup fix
 
 ## Completed now

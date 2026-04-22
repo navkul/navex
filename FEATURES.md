@@ -1,5 +1,11 @@
 # Working now
 
+## Changed on 2026-04-22 overlay space visibility fix
+- the helper now applies `canJoinAllSpaces` only when the overlay is shown
+- the queue should surface across desktops instead of remaining stuck on the terminal's original space
+- helper startup remains stable because space behavior is not configured during panel construction
+- show logs now include active-space state before and after ordering the overlay
+
 ## Changed on 2026-04-22 helper window startup fix
 - the helper no longer sets custom borderless-window `collectionBehavior` flags during startup
 - helper startup no longer stalls inside `configurePanel()`

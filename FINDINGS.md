@@ -1,3 +1,13 @@
+# April 22, 2026 overlay space findings
+
+## Space findings
+- The restart fix solved helper startup, but it also removed the only behavior that let the overlay escape the terminal's original space.
+- Applying a Spaces behavior during `configurePanel()` is too early for this helper, but applying it at show time is stable.
+- Apple's `canJoinAllSpaces` behavior is the better fit for this overlay surface than `moveToActiveSpace`:
+  - `moveToActiveSpace` depends on window activation semantics
+  - `canJoinAllSpaces` matches menu-bar behavior and is more deterministic for a passive queue surface
+- A menu-bar anchored overlay should behave globally across desktops until it is dismissed or cleared. That is closer to the user's expectation than leaving it stranded on the terminal's space.
+
 # April 22, 2026 helper startup findings
 
 ## Startup findings

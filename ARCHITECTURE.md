@@ -1,3 +1,15 @@
+# April 22, 2026 overlay space visibility fix
+
+## What changed
+- Beacon still avoids `collectionBehavior` changes during helper window construction, but the overlay now applies a Spaces behavior only at show time.
+- The helper now sets `window.collectionBehavior = [.canJoinAllSpaces]` immediately before ordering the overlay onscreen.
+- This keeps helper startup stable while making the menu-bar overlay behave more like a global menu-bar surface across desktops.
+- Show-time logging now records whether the overlay is on the active space before and after ordering.
+
+## Current behavior
+- The overlay should no longer stay tied to the terminal's original desktop or space after a clean restart.
+- Startup still avoids the earlier `configurePanel()` stall because the window behavior is no longer configured during panel construction.
+
 # April 22, 2026 helper window startup fix
 
 ## What changed
