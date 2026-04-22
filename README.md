@@ -158,6 +158,8 @@ Beacon now also treats row balance as a perceptual spacing problem rather than f
 
 The helper also no longer uses a fixed row-height estimate for summary rows. Waiting cards and panel height now size from the fitted content, which lets short rows collapse instead of carrying leftover empty space.
 
+That content-sized layout now keeps a touch more breathing room below the reprompt underline so the footer reads evenly against the title edge.
+
 If you need to debug helper visibility, inspect:
 
 ```bash

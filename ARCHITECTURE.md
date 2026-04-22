@@ -1,3 +1,12 @@
+# April 22, 2026 overlay footer breathing-room pass
+
+## What changed
+- The content-sized row layout now gives the footer slightly more room below the reprompt underline.
+- This pass only adjusts the shared bottom inset metric; the content-sized row model stays unchanged.
+
+## Current behavior
+- Waiting rows keep the tighter overall height from the content-sized layout while reading more evenly against the title edge.
+
 # April 22, 2026 content-sized overlay rows
 
 ## What changed

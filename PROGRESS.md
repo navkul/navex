@@ -1,3 +1,15 @@
+## Refreshed on 2026-04-22 after overlay footer breathing-room pass
+
+## Completed now
+- Increased footer breathing room slightly by raising the shared bottom inset for content-sized rows.
+
+## Validation
+- `npm run build`
+- `npm run check`
+
+## Remaining next steps
+- Confirm the live row now feels balanced enough to stop the spacing passes and move on.
+
 ## Refreshed on 2026-04-22 after content-sized overlay rows
 
 ## Completed now

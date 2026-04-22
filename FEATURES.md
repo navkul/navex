@@ -1,5 +1,8 @@
 # Working now
 
+## Changed on 2026-04-22 overlay footer breathing-room pass
+- increased the shared bottom inset so content-sized rows keep a little more room under the reprompt underline
+
 ## Changed on 2026-04-22 content-sized overlay rows
 - removed the fixed per-row height estimate from the overlay helper
 - rows and panel height now size from actual fitted content instead of a hard-coded summary row height

@@ -1,3 +1,9 @@
+# April 22, 2026 overlay footer spacing findings
+
+## Footer findings
+- After the fixed row-height path was removed, the remaining imbalance became small enough to tune directly through the shared bottom inset.
+- This is the right place for the last adjustment because the row now sizes from content correctly; the issue is no longer structural.
+
 # April 22, 2026 content-sized row findings
 
 ## Sizing findings
