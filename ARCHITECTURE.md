@@ -1,3 +1,19 @@
+# April 22, 2026 overlay typography pass
+
+## What changed
+- The overlay now uses the same monospaced system font across its UI surface instead of mixing proportional text with the usage header font.
+- This applies to:
+  - the menu-bar `Beacon` label
+  - row titles
+  - row summaries
+  - inline reprompt field
+  - header title and waiting count
+- The weekly usage line in the header no longer includes the `wk` prefix.
+
+## Current behavior
+- The overlay reads as one consistent typographic system.
+- The usage block stays compact, with the first line labeled `5h` and the second line left unlabeled.
+
 # April 22, 2026 overlay header usage pass
 
 ## What changed

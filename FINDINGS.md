@@ -1,3 +1,10 @@
+# April 22, 2026 overlay typography findings
+
+## Typography findings
+- The compact monospaced system font works better as a full overlay type system than as a usage-only accent.
+- Once the usage block adopted that typeface, the remaining proportional text felt visually inconsistent beside it.
+- The weekly usage line does not need its own `wk` prefix when it already sits directly under the `5h` line. Removing the prefix keeps the right side cleaner without losing meaning.
+
 # April 22, 2026 overlay usage findings
 
 ## Usage findings

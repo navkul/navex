@@ -1,5 +1,9 @@
 # Working now
 
+## Changed on 2026-04-22 overlay typography pass
+- switched the overlay to a monospaced system font throughout
+- removed the `wk` label from the weekly usage line
+
 ## Changed on 2026-04-22 overlay header usage pass
 - removed the per-row usage battery from each Codex row
 - the overlay now shows usage once in the top-right header

@@ -1,3 +1,16 @@
+## Refreshed on 2026-04-22 after overlay typography pass
+
+## Completed now
+- Switched the overlay typography to the same monospaced system font used by the usage header.
+- Removed the `wk` prefix from the weekly usage line.
+
+## Validation
+- `npm run build`
+- `npm run check`
+
+## Remaining next steps
+- Retest the overlay visually to confirm the monospaced type system still feels balanced at your normal size and density.
+
 ## Refreshed on 2026-04-22 after overlay header usage pass
 
 ## Completed now
