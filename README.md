@@ -154,6 +154,8 @@ Rows are still reorderable, but dragging now works from the row body rather than
 
 The row metric system has also been tightened so the title block and reprompt footer sit in a denser, more even vertical frame instead of leaving extra slack at the bottom of the card.
 
+Beacon now also treats row balance as a perceptual spacing problem rather than forcing symmetric top and bottom padding when the footer already carries more visual weight.
+
 If you need to debug helper visibility, inspect:
 
 ```bash
