@@ -1,3 +1,13 @@
+# April 22, 2026 overlay row balance findings
+
+## Balance findings
+- Equal top and bottom insets were still reading as bottom-heavy once the footer included:
+  - muted reprompt copy
+  - underline
+  - footer spacing
+- For this row design, visual balance requires asymmetric padding. The top edge needs slightly more room than the bottom edge because the footer already carries its own visual mass.
+- This is a good example of why UI layout should be tuned by perceived weight, not only by matching numbers.
+
 # April 22, 2026 overlay row density findings
 
 ## Density findings

@@ -1,3 +1,17 @@
+## Refreshed on 2026-04-22 after overlay row balance pass
+
+## Completed now
+- Tuned the waiting-row metrics for perceptual balance instead of symmetric padding.
+- Increased the top inset slightly while reducing bottom inset and footer spacing.
+- Reduced row height again without changing the core content/action column structure.
+
+## Validation
+- `npm run build`
+- `npm run check`
+
+## Remaining next steps
+- Verify the live overlay rows now read evenly top-to-bottom on your screen.
+
 ## Refreshed on 2026-04-22 after overlay row density pass
 
 ## Completed now

@@ -1,5 +1,9 @@
 # Working now
 
+## Changed on 2026-04-22 overlay row balance pass
+- tuned row padding asymmetrically so cards read visually balanced instead of mathematically even
+- reduced bottom slack below the reprompt footer and tightened row height again
+
 ## Changed on 2026-04-22 overlay row density pass
 - tightened row height through shared top/bottom insets, content spacing, reprompt height, and underline spacing
 - rows now use a denser and more balanced vertical rhythm without per-element nudges

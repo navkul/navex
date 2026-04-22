@@ -1,3 +1,17 @@
+# April 22, 2026 overlay row balance pass
+
+## What changed
+- The row metric system now intentionally uses asymmetric top and bottom insets.
+- The row became slightly top-heavier:
+  - top inset increased slightly
+  - bottom inset decreased
+  - content spacing tightened again
+  - reprompt underline gap reduced
+
+## Current behavior
+- Row cards are shorter and the title edge no longer competes with extra footer slack.
+- Beacon now treats row balance as a perceptual layout problem, not a strict numeric-equality problem.
+
 # April 22, 2026 overlay row density pass
 
 ## What changed
