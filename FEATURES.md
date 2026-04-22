@@ -1,5 +1,8 @@
 # Working now
 
+## Changed on 2026-04-22 overlay footer finish pass
+- increased the shared bottom inset again to give the reprompt footer a little more room in content-sized rows
+
 ## Changed on 2026-04-22 overlay footer breathing-room pass
 - increased the shared bottom inset so content-sized rows keep a little more room under the reprompt underline
 

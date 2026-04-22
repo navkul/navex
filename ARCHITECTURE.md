@@ -1,3 +1,12 @@
+# April 22, 2026 overlay footer finish pass
+
+## What changed
+- Increased the shared bottom inset for content-sized rows one more step.
+- Left the rest of the row metric system unchanged.
+
+## Current behavior
+- Rows keep the tighter content-sized shape while giving the reprompt footer a little more visual breathing room.
+
 # April 22, 2026 overlay footer breathing-room pass
 
 ## What changed

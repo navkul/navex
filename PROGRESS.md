@@ -1,3 +1,15 @@
+## Refreshed on 2026-04-22 after overlay footer finish pass
+
+## Completed now
+- Increased the content-sized row bottom inset one more step for final footer balance.
+
+## Validation
+- `npm run build`
+- `npm run check`
+
+## Remaining next steps
+- Confirm the live row reads balanced enough to stop UI spacing work on this card shape.
+
 ## Refreshed on 2026-04-22 after overlay footer breathing-room pass
 
 ## Completed now

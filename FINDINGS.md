@@ -1,3 +1,9 @@
+# April 22, 2026 overlay footer finish findings
+
+## Footer findings
+- After the structural sizing fix, the footer balance can be tuned safely through the shared bottom inset alone.
+- This last pass confirms the remaining issue was not row height anymore; it was simply a small amount of missing footer margin.
+
 # April 22, 2026 overlay footer spacing findings
 
 ## Footer findings
