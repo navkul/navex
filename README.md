@@ -142,6 +142,8 @@ Usage is now shown once in the overlay header instead of as a repeated battery w
 
 The header block uses compact monospaced text rather than a graphical battery so it stays closer to Codex's own status style without adding row clutter.
 
+The overlay now uses that same monospaced system font throughout instead of limiting it to the usage block, and the weekly line no longer shows a `wk` prefix.
+
 If you need to debug helper visibility, inspect:
 
 ```bash
