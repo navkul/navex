@@ -1,3 +1,19 @@
+# April 22, 2026 event-driven visibility findings
+
+## Visibility findings
+- The unwanted "overlay appears as soon as I prompt Codex" behavior came from two separate startup paths:
+  - helper startup treated any persisted waiting snapshot as a reason to auto-open
+  - daemon cold-start replay could resurrect the helper during `UserPromptSubmit`
+- Persisted waiting state and visible notification state need to be separate concerns:
+  - snapshot persistence is for recovery
+  - visible overlay opening should stay tied to a fresh waiting transition
+- The right trigger is the delta in waiting session ids, not simply `items.count > 0`.
+- Daemon replay should rebuild snapshot state quietly. Replaying old waiting sessions as synthetic `show` notifications makes recovery feel like a new notification.
+
+## Layout findings
+- The panel looked bottom-heavy because the root view was flipped but the background container was not. Header labels were being laid out in the background view's default bottom-origin coordinate system.
+- For this overlay, top-right fixed positioning on the active screen is cleaner than anchoring under the menu-bar item. The queue reads more like a lightweight desktop notification surface than a popover menu.
+
 # April 22, 2026 overlay space findings
 
 ## Space findings

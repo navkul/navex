@@ -1,5 +1,13 @@
 # Working now
 
+## Changed on 2026-04-22 event-driven overlay visibility fix
+- persisted waiting sessions no longer auto-open the overlay on helper startup
+- `user-prompt-submit` no longer cold-starts the helper through daemon replay
+- the overlay now auto-opens only when a new waiting session is added
+- the overlay now hides when waiting sessions are cleared instead of lingering onscreen automatically
+- the panel now positions itself at the active screen's top-right corner
+- `Codex Beacon` and the waiting count now render in the top header instead of the bottom edge
+
 ## Changed on 2026-04-22 overlay space visibility fix
 - the helper now applies `canJoinAllSpaces` only when the overlay is shown
 - the queue should surface across desktops instead of remaining stuck on the terminal's original space

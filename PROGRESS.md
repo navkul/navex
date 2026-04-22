@@ -1,3 +1,25 @@
+## Refreshed on 2026-04-22 after event-driven overlay visibility fix
+
+## Completed now
+- Changed helper auto-open behavior so persisted waiting sessions stay passive on startup and poll reloads.
+- The helper now auto-opens only on new waiting-session additions and hides on waiting-session removals.
+- Daemon startup now rewrites the overlay snapshot passively instead of replaying waiting sessions as active `show` notifications.
+- Repositioned the overlay to the active screen's top-right corner.
+- Fixed the panel header layout so `Codex Beacon` and the waiting count render at the top of the panel.
+
+## Validation
+- `npm run build`
+- `npm run check`
+- validated that `hook user-prompt-submit` cold-starts only the daemon, not the helper
+- validated that `hook stop` cold-starts the helper and shows the overlay once
+- confirmed helper logs now show startup refresh without `showOverlay`, followed by `showOverlay` only for the stop-triggered launch path
+- confirmed layout frames now resolve to the active screen's top-right region:
+  - `layoutPanel frame={{1032, 372}, {420, 532}}`
+
+## Remaining next steps
+- Have the user retest from a normal Codex session to confirm the overlay only appears on stop and not on prompt submit.
+- If top-right positioning should track a specific monitor in multi-display setups rather than the mouse screen, add an explicit screen-selection rule in config.
+
 ## Refreshed on 2026-04-22 after overlay space visibility fix
 
 ## Completed now

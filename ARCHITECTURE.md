@@ -1,3 +1,23 @@
+# April 22, 2026 event-driven overlay visibility fix
+
+## What changed
+- Overlay visibility is now event-driven instead of snapshot-driven.
+- The helper still hydrates from `overlay-snapshot.json` on startup, but it no longer auto-opens just because waiting sessions already exist.
+- The helper now auto-opens only when the waiting-session set gains at least one new session id.
+- If the waiting-session set only shrinks, the helper hides the overlay instead of leaving it pinned onscreen.
+- Daemon startup replay now repopulates `overlay-snapshot.json` passively through a snapshot rewrite instead of replaying synthetic `show` events into the helper path.
+- `UserPromptSubmit` can still cold-start the daemon, but it no longer cold-starts the helper.
+
+## Layout changes
+- The overlay panel is now positioned against the active screen's visible top-right corner instead of anchoring under the status-item button.
+- The panel background container is now a flipped view, which keeps `Codex Beacon` and the waiting count in the actual top header instead of the bottom of the panel.
+
+## Current behavior
+- Existing waiting sessions survive restarts in the snapshot and menu-bar state, but they stay passive until:
+  - a new stop event adds another waiting session
+  - or the user explicitly opens the panel from the status item
+- Entering a new Codex prompt should no longer make the overlay appear on screen unless a separate session has just stopped.
+
 # April 22, 2026 overlay space visibility fix
 
 ## What changed
