@@ -1,5 +1,14 @@
 # Working now
 
+## Changed on 2026-04-22 overlay header usage pass
+- removed the per-row usage battery from each Codex row
+- the overlay now shows usage once in the top-right header
+- header usage now includes:
+  - 5-hour remaining percentage
+  - weekly remaining percentage
+  - reset times
+- usage is rendered in a compact monospaced text style instead of a graphical battery
+
 ## Changed on 2026-04-22 event-driven overlay visibility fix
 - persisted waiting sessions no longer auto-open the overlay on helper startup
 - `user-prompt-submit` no longer cold-starts the helper through daemon replay

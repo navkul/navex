@@ -1,3 +1,17 @@
+# April 22, 2026 overlay usage findings
+
+## Usage findings
+- The transcript usage snapshot is account-level state, not true per-session attribution. Showing it inside every row overstated the relationship between a waiting session and the account budget.
+- A single overlay-level usage summary is the cleaner model:
+  - one latest snapshot
+  - one place to look
+  - no repeated battery widgets down the list
+- The Codex-style information that matters most is:
+  - 5-hour remaining percentage
+  - weekly remaining percentage
+  - reset times
+- In the overlay header, compact monospaced text carries that information better than a graphical battery.
+
 # April 22, 2026 event-driven visibility findings
 
 ## Visibility findings

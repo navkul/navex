@@ -1,3 +1,25 @@
+## Refreshed on 2026-04-22 after overlay header usage pass
+
+## Completed now
+- Removed the per-row usage battery from waiting-session rows.
+- Added a compact two-line usage summary in the overlay header.
+- The header now shows:
+  - current 5-hour remaining percentage
+  - current weekly remaining percentage
+  - reset times
+- Compacted the usage copy so the full weekly line fits cleanly in the header width.
+
+## Validation
+- `npm run build`
+- `npm run check`
+- confirmed the overlay screenshot shows:
+  - no row-level battery widgets
+  - header usage in the top-right
+  - full weekly reset line without truncation
+
+## Remaining next steps
+- Retest in your normal workflow and decide whether the header should stay always visible in the open overlay or move behind a small disclosure later.
+
 ## Refreshed on 2026-04-22 after event-driven overlay visibility fix
 
 ## Completed now

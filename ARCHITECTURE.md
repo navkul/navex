@@ -1,3 +1,17 @@
+# April 22, 2026 overlay header usage pass
+
+## What changed
+- Beacon no longer renders a usage meter inside every waiting-session row.
+- The overlay now shows account-level usage once, in the header, using the latest usage snapshot observed across the current waiting sessions.
+- The header usage block is two compact right-aligned lines:
+  - `5h ...`
+  - `wk ...`
+- Reset times are folded into those lines in a compact terminal-like format instead of using graphical battery bars.
+
+## Current behavior
+- Usage is treated as shared overlay context, not per-session row data.
+- The header now carries the most relevant account usage state without repeating the same information down the whole queue.
+
 # April 22, 2026 event-driven overlay visibility fix
 
 ## What changed

@@ -134,6 +134,14 @@ The helper now treats persisted waiting sessions as passive state. Restarting Be
 
 The overlay itself now sits in the active screen's top-right corner, and the header labels are pinned to the top of the panel.
 
+Usage is now shown once in the overlay header instead of as a repeated battery widget in every row. Beacon uses the latest available account usage snapshot from the waiting sessions and renders:
+
+- 5-hour remaining percent
+- weekly remaining percent
+- reset times
+
+The header block uses compact monospaced text rather than a graphical battery so it stays closer to Codex's own status style without adding row clutter.
+
 If you need to debug helper visibility, inspect:
 
 ```bash
