@@ -1,3 +1,14 @@
+# April 22, 2026 content-sized overlay rows
+
+## What changed
+- The overlay helper no longer uses a fixed per-row height estimate in `refresh()` and `layoutPanel()`.
+- Waiting rows are now measured from their fitted content height before being framed into the scroll container.
+- The panel height now follows the measured height of the visible rows instead of multiplying a hard-coded row estimate.
+
+## Current behavior
+- Row height is now driven by actual title, summary, and reprompt content.
+- The panel can shrink when a row has less content instead of preserving extra vertical slack from the old `112`-point estimate.
+
 # April 22, 2026 overlay row balance pass
 
 ## What changed

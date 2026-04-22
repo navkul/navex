@@ -1,3 +1,10 @@
+# April 22, 2026 content-sized row findings
+
+## Sizing findings
+- The remaining row imbalance was not just a padding problem. The helper was still framing every summary-visible row to a fixed `112` points.
+- Once a card has a fixed outer height, inset tuning can improve the look but cannot remove all slack.
+- For this overlay, row height has to come from fitted content. Otherwise the card keeps preserving empty space even when the internal layout is balanced.
+
 # April 22, 2026 overlay row balance findings
 
 ## Balance findings

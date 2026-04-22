@@ -1,5 +1,9 @@
 # Working now
 
+## Changed on 2026-04-22 content-sized overlay rows
+- removed the fixed per-row height estimate from the overlay helper
+- rows and panel height now size from actual fitted content instead of a hard-coded summary row height
+
 ## Changed on 2026-04-22 overlay row balance pass
 - tuned row padding asymmetrically so cards read visually balanced instead of mathematically even
 - reduced bottom slack below the reprompt footer and tightened row height again

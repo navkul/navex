@@ -1,3 +1,17 @@
+## Refreshed on 2026-04-22 after content-sized overlay rows
+
+## Completed now
+- Removed the fixed row-height estimate from the overlay helper.
+- Rows are now measured from fitted content height before placement in the scroll container.
+- Panel height now follows the measured visible rows instead of a hard-coded row multiple.
+
+## Validation
+- `npm run build`
+- `npm run check`
+
+## Remaining next steps
+- Verify on your screen that the rows now collapse tightly around the actual content instead of preserving leftover slack.
+
 ## Refreshed on 2026-04-22 after overlay row balance pass
 
 ## Completed now
