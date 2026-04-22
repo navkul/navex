@@ -1,3 +1,24 @@
+# April 22, 2026 helper window startup fix
+
+## What changed
+- Beacon still uses the plain borderless `NSWindow` overlay introduced in the previous visibility pass, but the helper no longer sets custom `collectionBehavior` flags during window construction.
+- The failing line was the window behavior assignment immediately after `window.level = .statusBar`; removing it restores full helper startup, snapshot hydration, layout, and on-screen ordering.
+- The helper keeps the deferred post-launch snapshot reload so it can correct the first frame once the status-item button has a real screen rect.
+- Helper logging is back to a smaller steady-state surface:
+  - startup
+  - panel configure begin/end
+  - snapshot apply
+  - layout frame
+  - show/hide actions
+
+## Current behavior
+- Overlay startup no longer stalls inside `configurePanel()`.
+- A fresh helper launch now reaches:
+  - window construction
+  - snapshot-driven refresh
+  - a real visible frame under the `Beacon` status item
+- The first layout can still happen before the menu-bar button has a usable screen rect, but the deferred reload corrects that frame and leaves the overlay visible.
+
 # April 21, 2026 overlay window anchoring fix
 
 ## What changed
@@ -7,7 +28,7 @@
   - size the root view from Beacon presentation state
   - position the overlay window from the status-item button screen rect
   - order the window front with `makeKeyAndOrderFront` plus `orderFrontRegardless`
-- The overlay window now joins all spaces and can move to the active space.
+- The overlay window now depends on explicit anchoring and front-ordering rather than panel-only space behavior.
 
 ## Current behavior
 - The queue can render as a real topmost helper window on the active desktop instead of only existing in the window server.
@@ -19,7 +40,7 @@
 - The Swift helper now bootstraps its waiting-session model from `overlay-snapshot.json` during initialization instead of depending on stdin-delivered `show` events to render the first visible state.
 - The daemon still owns the rendered overlay model and persists it on every `show` and `clear`, but helper startup no longer depends on a live event stream to become visible.
 - The helper still polls the snapshot file for changes, which is now the primary synchronization path.
-- Helper placement now targets the screen under the current mouse location and moves the panel into the active space before ordering it on screen.
+- Helper placement now recovers from early startup frames by reloading once the status-item anchor has a usable screen rect, then ordering the window on screen.
 - Beacon now writes helper-side visibility logs to `~/.codex-beacon/overlay-helper.log` for AppKit startup debugging.
 
 ## Current behavior

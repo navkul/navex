@@ -1,14 +1,23 @@
 # Working now
 
+## Changed on 2026-04-22 helper window startup fix
+- the helper no longer sets custom borderless-window `collectionBehavior` flags during startup
+- helper startup no longer stalls inside `configurePanel()`
+- the helper log is back to a smaller default set after isolating the window setup bug
+- restart validation now includes:
+  - helper log completion through `configurePanel end`
+  - live macOS window-list confirmation that the overlay window is onscreen
+  - a compositor screenshot showing the overlay after a clean restart
+
 ## Changed on 2026-04-21 overlay window anchoring fix
 - the queue now renders in a plain borderless helper window anchored under the `Beacon` menu-bar item
-- the helper window now joins all spaces and is explicitly ordered above the active desktop
+- the helper window is explicitly ordered above the active desktop
 - the visible overlay has been verified in a real full-screen compositor capture, not only through direct window capture
 
 ## Changed on 2026-04-21 overlay bootstrap visibility fix
 - the helper now bootstraps directly from `overlay-snapshot.json` instead of waiting for stdin `show` events to paint the first overlay state
 - helper startup now writes visibility diagnostics to `~/.codex-beacon/overlay-helper.log`
-- overlay placement now targets the current mouse screen and active space before ordering the panel
+- overlay placement now relies on a deferred reload so the status-item anchor can provide a real screen rect before the panel is positioned
 - the overlay visibility path has been validated through the live macOS window list, not just by inspecting Beacon state files
 
 ## Changed on 2026-04-21 overlay snapshot recovery

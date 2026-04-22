@@ -1,3 +1,17 @@
+# April 22, 2026 helper startup findings
+
+## Startup findings
+- The overlay restart bug was not in the daemon, snapshot replay, or helper hydration path. Those parts were working and the helper was receiving the waiting-session model correctly.
+- The helper was stalling during window setup immediately after `window.level = .statusBar`.
+- The specific bad call was the borderless window `collectionBehavior` assignment:
+  - `.canJoinAllSpaces`
+  - `.moveToActiveSpace`
+  - `.fullScreenAuxiliary`
+- Removing that behavior set is the stable path here. The helper still renders and orders on screen without it, and it no longer hangs before the first refresh.
+- Live window-server inspection and compositor capture were the decisive checks:
+  - before the fix, logs stopped in `configurePanel()`
+  - after the fix, the helper produced an onscreen `420x532` window owned by `CodexBeaconOverlay`
+
 # April 21, 2026 overlay surface findings
 
 ## Surface findings

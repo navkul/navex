@@ -1,3 +1,28 @@
+## Refreshed on 2026-04-22 after helper window startup fix
+
+## Completed now
+- Removed the borderless helper window `collectionBehavior` assignment that was stalling startup during `configurePanel()`.
+- Kept the deferred snapshot reload so the helper can recover from the initial pre-anchor frame and settle under the `Beacon` status item.
+- Reduced the helper log surface back down after isolating the startup bug.
+
+## Validation
+- `npm run build`
+- killed and restarted the daemon/helper
+- triggered a real `Stop` hook path through `node dist/cli.js hook stop`
+- confirmed helper logs now continue through:
+  - `configurePanel end`
+  - `applySnapshot reason=did-finish`
+  - `showOverlay visibleAfter=true`
+- confirmed via `CGWindowListCopyWindowInfo` that the helper owns an onscreen window at:
+  - width `420`
+  - height `532`
+  - `kCGWindowIsOnscreen = 1`
+- captured a real screenshot showing the overlay visible above the active app after helper restart
+
+## Remaining next steps
+- Have the user rerun the normal `npm run build` plus fresh `codex` workflow to confirm the repaired helper path matches their local session flow.
+- If the initial offscreen pre-anchor frame becomes user-visible, tighten the first-layout timing instead of reintroducing the failing window behavior flags.
+
 ## Refreshed on 2026-04-21 after overlay window anchoring fix
 
 ## Completed now

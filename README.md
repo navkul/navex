@@ -124,6 +124,8 @@ The helper now bootstraps directly from that persisted snapshot on startup. It n
 
 The visible macOS surface is currently a plain borderless helper window anchored under the `Beacon` status item. That path replaced the earlier panel/popover variants because it was materially more reliable in real compositor captures.
 
+The helper also no longer sets custom borderless-window `collectionBehavior` flags during startup. That behavior turned out to stall helper initialization on restart; the simpler window setup path is the stable one here.
+
 If you need to debug helper visibility, inspect:
 
 ```bash
