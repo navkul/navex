@@ -128,6 +128,12 @@ The helper also no longer sets custom borderless-window `collectionBehavior` fla
 
 To keep the overlay visible outside the terminal's original desktop, Beacon now applies `canJoinAllSpaces` only when the overlay is shown. That keeps startup stable while making the queue behave more like a global menu-bar surface.
 
+The helper now treats persisted waiting sessions as passive state. Restarting Beacon no longer auto-opens the overlay just because old waiting sessions still exist in `overlay-snapshot.json`; the panel only auto-opens when a fresh stop event adds a new waiting session.
+
+`UserPromptSubmit` can still wake the daemon if it was not running, but daemon recovery now rebuilds the snapshot quietly instead of replaying old waiting sessions as visible notifications.
+
+The overlay itself now sits in the active screen's top-right corner, and the header labels are pinned to the top of the panel.
+
 If you need to debug helper visibility, inspect:
 
 ```bash
