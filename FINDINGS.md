@@ -1,3 +1,16 @@
+# April 23, 2026 live overlay-row findings
+
+## UI findings
+- Once the overlay starts showing all live sessions, the old dismiss affordance becomes misleading. A row that represents real session state should disappear because the session changed, not because the user hid it locally.
+- The active-session footer works better as a disabled status lane than as an empty reprompt field. Reusing the same layout keeps row rhythm stable while still making "not repromptable right now" obvious.
+- Blue is the clearest active-state dot color here because it reads as in-progress without colliding with the waiting outcome colors:
+  - gray for neutral ready
+  - green for done
+  - amber for blocked or needs-input
+  - red for failed
+  - blue for actively working
+- The live screenshot confirmed the single-arrow column reads cleaner than the old stacked dismiss/open controls and does not compete with the footer interaction zone.
+
 # April 23, 2026 live-session registry findings
 
 ## Lifecycle findings

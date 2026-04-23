@@ -1,3 +1,19 @@
+## Refreshed on 2026-04-23 after live overlay-row state pass
+
+## Completed now
+- Removed the row dismiss button and left a single trailing open/focus arrow in the old top-button position.
+- Taught the helper to show active sessions as live working rows with a disabled animated `Working.` footer instead of a reprompt field.
+- Updated header copy so the overlay now reports live and waiting counts together.
+- Cleaned helper-side ordering state when rows disappear.
+
+## Validation
+- `npm run build`
+- `npm run check`
+- visual validation from a synthetic live-session snapshot launched through Terminal with screenshot capture at `.codex/navex-overlay-validation.png`
+
+## Remaining next steps
+- Run the full wrapper flow against real Codex sessions to confirm the close-event path and the working-to-waiting transitions feel right in everyday use.
+
 ## Refreshed on 2026-04-23 after live-session registry pass
 
 ## Completed now

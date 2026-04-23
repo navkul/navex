@@ -1,5 +1,12 @@
 # Working now
 
+## Changed on 2026-04-23 live overlay-row state pass
+- overlay rows now represent live session state instead of only waiting notifications
+- the dismiss `x` is gone and the focus arrow now occupies the old top control position
+- active sessions stay visible with an animated `Working.` footer and a blue in-progress dot
+- waiting sessions keep the reprompt footer only when the terminal supports it
+- the header now reports total live sessions plus how many are currently waiting
+
 ## Changed on 2026-04-23 live-session registry pass
 - sessions are now tracked as live wrapper-owned interactive sessions instead of a historical append-only list
 - the wrapper emits a close event when Codex exits so dead sessions are removed immediately

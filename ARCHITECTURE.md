@@ -1,3 +1,17 @@
+# April 23, 2026 live overlay-row state pass
+
+## What changed
+- The Swift helper row model now renders live session status explicitly instead of treating every visible row as a waiting notification.
+- The dismiss path was removed from the row layout and interaction model.
+- The trailing action column now contains only the focus/open arrow, occupying the old top button position.
+- Working sessions now render a disabled footer field with an animated `Working.` / `Working..` / `Working...` loop and a blue status treatment.
+- Header copy now summarizes the live queue as `live` plus `waiting` counts instead of only talking about waiting sessions.
+
+## Current behavior
+- Waiting sessions keep summary plus reprompt affordances when the terminal supports them.
+- Active sessions stay visible in the overlay, show a working footer instead of a reprompt target, and cannot be reprompted from the helper.
+- The overlay order store is cleaned when sessions disappear so closed sessions do not leave stale ordering entries behind.
+
 # April 23, 2026 live-session registry pass
 
 ## What changed
