@@ -17,12 +17,13 @@ Current scope:
 - tracks interactive Codex sessions launched through the wrapper
 - stable session names, plus custom names with `codex -N <name>`
 - native menu-bar overlay for waiting sessions
+- explicit `navex overlay show|hide|toggle` control for the floating overlay
+- global overlay hotkey, defaulting to `cmd+option+k`
 - compact transcript-tail summaries
 - focuses the originating terminal session from the overlay
 - clears the waiting item on the next prompt submit
 - persisted local state across daemon/helper restarts
 - drag-to-reorder waiting sessions
-- dismiss controls per session
 - inline reprompt for Terminal.app and iTerm2
 - overlay header usage summary
 - config for app label, width, and summary behavior
@@ -82,7 +83,7 @@ Start one with a custom name:
 codex -N api-migration
 ```
 
-When Codex stops, Navex shows the waiting session in the overlay. You can focus it, dismiss it, reorder it, or reprompt inline when the terminal supports it. When you send the next prompt in that session, the waiting item clears automatically.
+When Codex stops, Navex shows the waiting session in the overlay. You can focus it, reorder it, or reprompt inline when the terminal supports it. Inline reprompts show `Submitting.` immediately, switch to `Working.` after Codex accepts the prompt, and show `Reprompt not confirmed` if the session never starts. When you send the next prompt in that session, the waiting item clears automatically.
 
 ## Commands
 
@@ -90,6 +91,14 @@ List tracked sessions:
 
 ```bash
 navex sessions
+```
+
+Show, hide, or toggle the overlay:
+
+```bash
+navex overlay show
+navex overlay hide
+navex overlay toggle
 ```
 
 Show config:
@@ -113,11 +122,18 @@ navex config set appDisplayName "Arnav"
 Tune the overlay:
 
 ```bash
+navex config set overlayHotkey "cmd+option+k"
 navex config set overlayWidth 420
 navex config set overlayShowSummary true
 navex config set overlaySummaryStyle smart
 navex config set overlaySummaryMaxWords 18
 navex config set overlaySummaryMaxChars 140
+```
+
+Disable the global hotkey:
+
+```bash
+navex config set overlayHotkey null
 ```
 
 ## Local state
@@ -128,6 +144,7 @@ Useful files there:
 
 - `config.json`
 - `registry.json`
+- `overlay-control.json`
 - `overlay-state.json`
 - `overlay-snapshot.json`
 - `overlay-helper.log`
