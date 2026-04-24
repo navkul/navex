@@ -1,3 +1,94 @@
+# April 24, 2026 reprompt confirmation UI findings
+
+## State findings
+- A confirmed helper delivery is not the same signal as Codex starting a turn.
+- The real correctness signal already exists in the `user-prompt-submit` hook, so the overlay should reserve `Working.` for that event.
+- The user still needs instant feedback after pressing Return. A local `Submitting.` row state gives that feedback without mutating persisted session status.
+- If the prompt-submit hook never arrives, the manager should show an explicit unconfirmed state so the user knows the reprompt did not become a running session.
+
+## Delivery findings
+- The iTerm helper's fixed per-character sleep was a visible latency source for longer prompts.
+- Posting the synthetic character events without per-character delay, then pausing once before Return, keeps the final-character race protection while reducing avoidable wait time.
+
+# April 23, 2026 reprompt timing and snapshot findings
+
+## Delivery findings
+- The missing final `o` in `hello` indicates the Return event can race the final character when Quartz events are posted too tightly.
+- The synthetic Return event should carry both:
+  - the physical Return keycode
+  - an explicit carriage-return Unicode payload
+- When helper startup uses an old persisted snapshot, stale rows can be visible before the daemon repolls. Rebuilding the snapshot from the registry before helper launch is the correct fix.
+
+# April 23, 2026 iTerm fail-closed targeting findings
+
+## Targeting findings
+- For iTerm rows, the session unique ID is the only trustworthy background target.
+- Falling back from a missing session unique ID to `window + tab -> current_session` is unsafe because stale rows can end up reprompting the wrong live Codex session.
+- In this product, wrong-session delivery is worse than a clean failure. iTerm reprompt should therefore fail closed when the stored unique session ID no longer resolves.
+
+# April 23, 2026 iTerm CGEvent reprompt findings
+
+## Delivery findings
+- The iTerm Python API is useful for finding and selecting the target session, but it still does not appear to provide a submit primitive that Codex treats like a real Enter.
+- Apple’s Quartz event APIs do provide process-targeted keyboard delivery through `CGEventPostToPid`, and iTerm can select a session in the background with `async_activate(..., order_window_front=False)`.
+- Combining those two layers is the cleanest next step:
+  - iTerm chooses the correct session
+  - Quartz injects actual keyboard events into the iTerm process
+- This is a better fit than background shell submission because it keeps reprompt attached to the existing interactive Codex TUI.
+
+# April 23, 2026 iTerm submit-key split findings
+
+## Delivery findings
+- For the Codex TUI, sending `message + newline` as one iTerm `async_send_text` payload is not equivalent to a typed submit. It can still leave the composer populated without dispatching the turn.
+- The likely boundary is paste versus keypress semantics. Codex is happy to accept pasted text into the composer, but the submit action needs to arrive as its own input event.
+- The next cleanest iTerm path is therefore:
+  - send the prompt text
+  - send Return separately
+- This keeps the live TUI, approvals, and working-state transitions inside the existing terminal session instead of moving reprompt execution into a second background Codex process.
+
+# April 23, 2026 iTerm reprompt helper findings
+
+## Delivery findings
+- On this macOS build, Navex cannot use `TIOCSTI` for reprompt delivery. Opening the tracked TTY read-write fails on permission bits, and `TIOCSTI` itself is rejected with `Operation not permitted`.
+- iTerm AppleScript `write text` is also not a true submit path for the Codex composer. It can populate the input field without triggering the same submit behavior as a real Enter.
+- Because both old paths are misleading, the correct product behavior is to fail closed rather than mark the session active on a best-effort send.
+- iTerm's own Python API is the first path here that is actually shaped for background session-targeted input, so Navex should delegate reprompt submission to an iTerm-resident helper script and wait for a result file before updating overlay state.
+- The first launch failure after install is deterministic: iTerm does not discover a newly written script until it restarts.
+
+# April 23, 2026 reprompt tty-delivery findings
+
+## Delivery findings
+- For this product, the tracked TTY is only the right target if Navex injects into the terminal input queue, not if it just writes bytes to the terminal device.
+- Writing display bytes to the slave TTY can make text appear in Codex without actually submitting it. That is why the earlier PTY write path looked half-correct but was still wrong.
+- Emitting `session-active` immediately after a successful reprompt is only safe on the confirmed input-injection path, not on a looser best-effort fallback.
+
+# April 23, 2026 reprompt-focus findings
+
+## Focus findings
+- The broken reprompt field was a window-surface problem, not a text-field configuration problem.
+- A borderless `NSWindow` does not reliably accept keyboard focus unless it explicitly opts into key/main window behavior.
+- Fixing keyboard entry at the window level is the right design because the overlay already has buttons, a hotkey, and inline text input. It is an interactive surface, not a passive display.
+
+# April 23, 2026 global overlay hotkey findings
+
+## Interaction findings
+- A real global hotkey is the cleanest built-in toggle mechanism for Navex on macOS. It works without terminal focus, does not depend on external automation tools, and fits the existing menu-bar helper architecture.
+- A custom trackpad gesture would be a worse core implementation because macOS does not expose a lightweight app-owned API for arbitrary global gesture binding comparable to hotkey registration.
+- Hotkey state belongs in overlay presentation config, not in helper-only local state, because users need a stable way to change or disable the binding from the `navex` CLI.
+- `cmd+option+k` is a better default than the earlier semicolon binding because it is easier to remember and less likely to feel like punctuation trivia.
+
+# April 23, 2026 overlay-control and reprompt findings
+
+## Control findings
+- A dedicated `navex overlay ...` command is the cleanest visibility contract here because it keeps the product logic in Navex while letting the user bind the trigger however they want at the macOS layer.
+- Overlay visibility should not depend on a fresh session transition. Manual show and hide are a separate concern from the daemon's session snapshot.
+- Once overlay control can come from short-lived CLI processes, helper reuse cannot depend only on an in-memory child-process handle. The running-helper check has to work across separate `navex` invocations.
+
+## Reprompt findings
+- `write text` in iTerm and `do script` in Terminal are the wrong abstraction for an interactive Codex TUI. They are good at telling a shell to run text, not at reliably feeding the current foreground app inside that terminal.
+- For this repo, reliable reprompt is more important than avoiding focus changes. Selecting the matched session and sending actual keyboard input is the safer path.
+- The tradeoff is explicit: reprompt now behaves more like "jump to that session and submit this prompt for me" than "background-inject text into the terminal."
+
 # April 23, 2026 live overlay-row findings
 
 ## UI findings

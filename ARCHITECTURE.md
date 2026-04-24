@@ -1,3 +1,135 @@
+# April 24, 2026 reprompt confirmation UI pass
+
+## What changed
+- The overlay now switches a reprompt row to a local `Submitting.` state immediately after Return is pressed.
+- `navex reprompt` no longer emits its own `session-active` event after helper delivery succeeds.
+- The row only changes to `Working.` when the real Codex `user-prompt-submit` hook reports `session-active`.
+- If that hook does not arrive within the confirmation window, the row shows `Reprompt not confirmed` instead of silently staying on the submitted text.
+- The iTerm Quartz helper no longer sleeps between every prompt character, while still waiting briefly before posting Return.
+
+## Current behavior
+- Reprompt Enter feels responsive because the overlay acknowledges local submission immediately.
+- The correctness boundary is tighter: helper delivery means "submitted to terminal input", while `Working.` means Codex actually accepted a new prompt.
+- Failed or half-submitted reprompts remain visible as waiting rows with an explicit unconfirmed state.
+
+# April 23, 2026 reprompt timing and snapshot refresh pass
+
+## What changed
+- The Quartz-based iTerm reprompt path now gives the final prompt character more time to land before Return is posted.
+- The synthetic Return event now carries an explicit `\r` Unicode payload in addition to the Return keycode.
+- Helper launch now rewrites `overlay-snapshot.json` from the live registry before spawning `NavexOverlay`.
+
+## Current behavior
+- The reprompt path is less likely to truncate the final typed character before submit.
+- Overlay relaunches now bootstrap from current session state instead of briefly showing stale rows from an old persisted snapshot.
+- This removes a confusing class of stale-row regressions while the remaining submit-semantics issue is narrowed down.
+
+# April 23, 2026 iTerm fail-closed session targeting pass
+
+## What changed
+- iTerm reprompt no longer falls back from a missing recorded `terminalSessionUniqueId` to the tab's current session.
+- If Navex has a stored iTerm session unique ID and iTerm can no longer resolve it, reprompt now fails instead of guessing.
+- Waiting-row reprompt availability for iTerm now depends on having that session unique ID recorded.
+
+## Current behavior
+- Wrong-session reprompts are now blocked at the source instead of being misrouted into whichever session happens to be current in the tab.
+- This makes stale iTerm rows degrade safely:
+  - focus can still work if the window exists
+  - reprompt becomes unavailable or fails closed rather than targeting the wrong Codex TUI
+
+# April 23, 2026 iTerm CGEvent reprompt pass
+
+## What changed
+- The iTerm reprompt helper still resolves the target session through the Python API, but it no longer depends on `session.async_send_text` for delivery.
+- After resolving the session, the helper activates that session inside iTerm without bringing the window front, then posts real keyboard events to the iTerm process with Quartz `CGEventPostToPid`.
+- Prompt characters are delivered as synthetic keyboard input and Return is posted as its own key event.
+
+## Current behavior
+- Reprompt still stays on the iTerm-only path for session targeting.
+- Delivery is now split into two responsibilities:
+  - iTerm Python API chooses the right background session
+  - Quartz keyboard events provide input that is closer to a real Enter than the Python text API
+- This is the first path here that is designed to preserve the live TUI while avoiding terminal-window focus changes.
+
+# April 23, 2026 iTerm submit-key split pass
+
+## What changed
+- The iTerm reprompt helper still uses the Python API, but it no longer sends the prompt text and submit character as one combined payload.
+- Navex now sends the prompt text first and then sends Return as a separate iTerm input event.
+- This keeps the reprompt path aligned with the live Codex TUI input model instead of relying on a single pasted blob to also count as submit.
+
+## Current behavior
+- Inline reprompt still stays in-place in iTerm without activating the terminal window.
+- The helper now behaves more like typed input:
+  - prompt content is delivered first
+  - submit is delivered second
+- Live validation is still required on a real waiting row to confirm that Codex treats the separated Return as a true submit.
+
+# April 23, 2026 iTerm reprompt helper pass
+
+## What changed
+- Removed the broken reprompt path that depended on `TIOCSTI` or iTerm AppleScript `write text`.
+- Navex now installs a dedicated `NavexReprompt.py` iTerm script into `~/Library/Application Support/iTerm2/Scripts/`.
+- iTerm reprompt requests now launch that script with the target session hints and a per-request result file under `~/.navex/`.
+- Navex waits for the script to report success before emitting `session-active`, so the overlay only flips to `Working.` after a confirmed submit path.
+- The CLI `reprompt` command now properly awaits the async reprompt flow instead of returning before delivery finished.
+
+## Current behavior
+- Broken half-submitted iTerm reprompts are gone. Navex now fails closed when the iTerm helper path is unavailable.
+- The first iTerm reprompt after this change requires one iTerm restart so the app discovers `NavexReprompt.py`.
+- If iTerm still refuses the helper after restart, the remaining blocker is iTerm Python API enablement rather than Navex pretending the reprompt worked.
+
+# April 23, 2026 reprompt tty-delivery pass
+
+## What changed
+- Reprompt delivery now tries real terminal input injection through `TIOCSTI` on the tracked TTY first instead of writing display bytes into the terminal surface.
+- After a confirmed reprompt injection, Navex now emits a `session-active` event immediately for that session.
+- The overlay helper no longer auto-hides itself after a successful reprompt submission.
+
+## Current behavior
+- Pressing Return in the reprompt field should no longer switch desktops or pan focus to the terminal window.
+- A confirmed reprompt should submit directly into the live Codex session and change that row to the active `Working.` state.
+- AppleScript terminal-targeting remains only as a narrower best-effort fallback when the tracked TTY is missing or unusable.
+
+# April 23, 2026 reprompt-focus surface fix
+
+## What changed
+- The overlay helper now uses a dedicated `OverlayWindow` subclass for its borderless surface.
+- That window explicitly opts into `canBecomeKey` and `canBecomeMain`, so embedded controls can accept keyboard focus.
+
+## Current behavior
+- The reprompt text field can now be clicked and typed into on waiting rows.
+- This fix is at the window surface level, not a field-level workaround, so other future keyboard-driven overlay controls can also rely on the helper becoming key.
+
+# April 23, 2026 global overlay hotkey pass
+
+## What changed
+- Overlay presentation now carries a configurable `overlayHotkey` value from Node into the Swift helper.
+- The helper now registers a real global macOS hotkey through Carbon instead of depending on a terminal command to toggle visibility.
+- The default hotkey is `cmd+option+k`, and setting `overlayHotkey` to `null` disables registration.
+- Config writes now refresh the persisted overlay snapshot immediately so the helper can pick up hotkey and presentation changes without waiting for another session event.
+
+## Current behavior
+- The status-item button still toggles the overlay.
+- The helper also toggles the overlay from a global shortcut while it is running.
+- Trackpad gestures remain out of scope because macOS does not provide a comparably clean built-in custom-gesture hook for this app surface.
+
+# April 23, 2026 overlay-control and reprompt hardening pass
+
+## What changed
+- Navex now has a first-class overlay control path through `navex overlay show`, `navex overlay hide`, and `navex overlay toggle`.
+- The Node side writes explicit control commands into `~/.navex/overlay-control.json` and ensures the helper is running for show or toggle requests.
+- Helper startup from standalone overlay commands now checks for an already-running `NavexOverlay` process before spawning another instance.
+- The Swift helper now polls that control file separately from the session snapshot, so manual visibility changes do not depend on a new stop event.
+- Reprompt delivery no longer relies on terminal AppleScript commands that behave like shell submission.
+- Reprompt now targets the matched terminal session, brings that live session to the foreground, then sends real keyboard input plus Return through `System Events`.
+
+## Current behavior
+- Overlay visibility can be toggled on demand from the CLI and is cleanly bindable to a keyboard shortcut, Shortcuts action, BetterTouchTool trigger, or gesture without more Navex changes.
+- Manual overlay visibility is now separate from session snapshot updates.
+- Standalone overlay commands no longer need an in-memory daemon-owned child handle to talk to the existing helper.
+- Reprompt is now designed around the actual Codex TUI input path in Terminal.app and iTerm2 instead of around shell command injection.
+
 # April 23, 2026 live overlay-row state pass
 
 ## What changed

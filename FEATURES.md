@@ -1,5 +1,59 @@
 # Working now
 
+## Changed on 2026-04-24 reprompt confirmation UI pass
+- pressing Return in an inline reprompt now changes the row to `Submitting.` immediately
+- rows only become `Working.` after the real Codex prompt-submit hook marks the session active
+- if a submitted reprompt never starts a Codex turn, the overlay changes the row to `Reprompt not confirmed`
+- iTerm reprompt delivery no longer waits between each synthetic character, reducing command completion time for longer prompts
+
+## Changed on 2026-04-23 reprompt timing and snapshot refresh pass
+- the Quartz-based iTerm reprompt helper now waits longer before posting Return and sends Return with an explicit `\r` payload
+- helper launch now rebuilds `overlay-snapshot.json` from the live registry before `NavexOverlay` starts
+- stale rows should no longer briefly reappear after daemon/helper restarts
+
+## Changed on 2026-04-23 iTerm fail-closed session targeting pass
+- iTerm reprompt no longer falls back from a missing session unique ID to the tab’s current session
+- waiting-row iTerm reprompt now requires a recorded `terminalSessionUniqueId`
+- stale iTerm rows now fail closed instead of sending text into the wrong live session
+
+## Changed on 2026-04-23 iTerm CGEvent reprompt pass
+- iTerm reprompt still resolves the target session through the Python API, but input delivery now uses Quartz keyboard events instead of `async_send_text`
+- the helper now selects the target iTerm session in the background, posts prompt characters to the iTerm process, and posts Return as a real key event
+- this is intended to preserve the existing live Codex TUI while avoiding terminal window focus changes
+
+## Changed on 2026-04-23 iTerm submit-key split pass
+- iTerm reprompt still uses the Python API helper, but it now sends prompt text and submit as separate input events
+- the helper now types the reprompt content first and then sends Return, instead of sending one combined payload that Codex could treat like pasted text
+- this keeps reprompt execution in the existing live Codex TUI path without foregrounding the terminal window
+
+## Changed on 2026-04-23 iTerm reprompt helper pass
+- iTerm reprompt no longer uses `write text` or the blocked `TIOCSTI` path
+- Navex now writes an `NavexReprompt.py` helper into your iTerm Scripts directory and launches that script for reprompt delivery
+- iTerm reprompt now waits for a result file before marking the session active, so the overlay only flips to `Working.` after confirmed helper success
+- if iTerm has not discovered the helper script yet, Navex now returns a clear restart instruction instead of typing unsent text into Codex
+
+## Changed on 2026-04-23 reprompt tty-delivery pass
+- reprompt now injects real terminal input through the tracked session TTY first instead of activating the terminal window or writing display bytes
+- confirmed reprompts now emit `session-active` immediately so the row can flip to `Working.`
+- the overlay no longer auto-hides itself after a successful reprompt submit
+
+## Changed on 2026-04-23 reprompt-focus surface fix
+- switched the helper borderless surface to a keyable `OverlayWindow` subclass
+- waiting-row reprompt fields can now be clicked and typed into again
+
+## Changed on 2026-04-23 global overlay hotkey pass
+- added a real global overlay hotkey in the helper, defaulting to `cmd+option+k`
+- added `overlayHotkey` config so the shortcut can be changed or disabled with `navex config set`
+- config writes now refresh overlay presentation immediately, so helper-side hotkey updates do not wait for another session event
+- explicitly kept trackpad gestures out of the MVP path in favor of the built-in hotkey route
+
+## Changed on 2026-04-23 overlay-control and reprompt hardening pass
+- added `navex overlay show`, `navex overlay hide`, and `navex overlay toggle`
+- the overlay helper now watches a dedicated `overlay-control.json` command file, so manual visibility changes work even when session state is unchanged
+- standalone overlay commands now reuse an existing helper instead of assuming the current `navex` process launched it
+- inline reprompt for Terminal.app and iTerm2 now targets the live terminal session, foregrounds it, and submits real keyboard input instead of relying on terminal shell-command scripting
+- the README now documents the explicit overlay control commands and removes the stale dismiss reference
+
 ## Changed on 2026-04-23 live overlay-row state pass
 - overlay rows now represent live session state instead of only waiting notifications
 - the dismiss `x` is gone and the focus arrow now occupies the old top control position

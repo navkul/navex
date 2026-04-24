@@ -1,3 +1,148 @@
+## Refreshed on 2026-04-24 after reprompt confirmation UI pass
+
+## Completed now
+- Added an immediate local `Submitting.` state for overlay reprompt rows.
+- Changed `Working.` to depend on the real Codex `user-prompt-submit` hook instead of the reprompt helper's delivery success.
+- Added a timeout path that shows `Reprompt not confirmed` when a reprompt delivery does not become an active Codex session.
+- Removed the fixed per-character sleep from the iTerm Quartz helper while keeping the final pre-Return pause.
+
+## Validation
+- `npm run check`
+- `npm run build`
+
+## Remaining next steps
+- Run one live iTerm reprompt from a waiting row and confirm it moves from `Submitting.` to `Working.` on hook arrival.
+- Run one intentional failed reprompt and confirm the row settles on `Reprompt not confirmed`.
+
+## Refreshed on 2026-04-23 after reprompt timing and snapshot refresh pass
+
+## Completed now
+- Added more spacing between final character delivery and the synthetic Return event in the Quartz-based iTerm reprompt helper.
+- Changed the synthetic Return event to carry an explicit `\r` payload.
+- Rebuilt overlay snapshot state from the live registry before helper launch so stale rows do not reappear during bootstrap.
+
+## Validation
+- `npm run check`
+- `npm run build`
+
+## Remaining next steps
+- Retest one real iTerm reprompt and confirm whether the full prompt now lands and whether Return is finally treated as submit in Codex.
+
+## Refreshed on 2026-04-23 after iTerm fail-closed session targeting pass
+
+## Completed now
+- Removed the unsafe iTerm fallback that could retarget a stale row onto the current session in the tab.
+- Tightened iTerm reprompt availability so it now requires a recorded `terminalSessionUniqueId`.
+
+## Validation
+- `npm run check`
+- `npm run build`
+
+## Remaining next steps
+- Retest reprompt on the real remaining `codex 13` row now that the stale-row misrouting path is blocked.
+- If the prompt still lands unsent in the correct session, the remaining issue is submit semantics only, not session targeting.
+
+## Refreshed on 2026-04-23 after iTerm CGEvent reprompt pass
+
+## Completed now
+- Reworked the iTerm helper again so it now selects the target session in the background and posts real keyboard events to iTerm with Quartz instead of relying on `async_send_text`.
+- Kept the target-session resolution in the iTerm Python API, which avoids guessing at tabs or windows from the macOS side alone.
+
+## Validation
+- `npm run check`
+- `npm run build`
+
+## Remaining next steps
+- Run one live overlay reprompt in iTerm and confirm the Quartz-posted Return now submits the prompt instead of leaving text in the composer.
+
+## Refreshed on 2026-04-23 after iTerm submit-key split pass
+
+## Completed now
+- Changed the iTerm helper so it sends reprompt text first and submits with a separate Return event instead of one combined payload.
+- Kept the reprompt flow on the iTerm Python API path, which preserves the existing live terminal session rather than routing the turn through a second headless Codex process.
+
+## Validation
+- `npm run check`
+- `npm run build`
+
+## Remaining next steps
+- Run one live overlay reprompt in iTerm and confirm the separated Return now executes the prompt instead of leaving it in the composer.
+
+## Refreshed on 2026-04-23 after iTerm reprompt helper pass
+
+## Completed now
+- Removed the broken iTerm reprompt fallback that could type into Codex without truly submitting.
+- Added installation of an iTerm-side `NavexReprompt.py` script and a result-file handshake under `~/.navex/`.
+- Changed the CLI reprompt path so it waits for helper completion and only marks the session active after confirmed success.
+- Verified the new failure mode is explicit by running `node dist/cli.js reprompt ...`, which now reports `iTerm has not loaded NavexReprompt.py yet. Restart iTerm once, then try reprompt again.` instead of injecting junk into the session.
+
+## Validation
+- `npm run check`
+- `npm run build`
+- `node dist/cli.js reprompt --session-id 019dbb00-0239-76c1-b407-e585953cff61 --message 'navex reprompt smoke test'`
+
+## Remaining next steps
+- Restart iTerm once so it discovers the new helper script.
+- Run one live reprompt after restart and confirm the iTerm Python API path submits in place and flips the row to `Working.`.
+
+## Refreshed on 2026-04-23 after reprompt tty-delivery pass
+
+## Completed now
+- Reworked reprompt to inject real terminal input through `TIOCSTI` on the tracked TTY instead of stealing focus or writing display bytes into the terminal surface.
+- Marked sessions active immediately only after confirmed reprompt delivery.
+- Kept the overlay open after reprompt so the row can transition into the active `Working.` state.
+
+## Validation
+- `npm run check`
+- `npm run build`
+
+## Remaining next steps
+- Run one live reprompt against a real waiting Codex session and confirm the PTY path works on your normal terminal setup.
+
+## Refreshed on 2026-04-23 after reprompt-focus surface fix
+
+## Completed now
+- Fixed the overlay surface so the reprompt field can accept keyboard focus again.
+- Kept the fix in the Swift window layer instead of adding a reprompt-only field hack.
+
+## Validation
+- `npm run check`
+- `npm run build`
+
+## Remaining next steps
+- Run one live waiting-session reprompt end to end against Terminal.app or iTerm2 to confirm both field entry and prompt submission feel right.
+
+## Refreshed on 2026-04-23 after global overlay hotkey pass
+
+## Completed now
+- Added a real global overlay toggle shortcut in the Swift helper with a default binding of `cmd+option+k`.
+- Added `overlayHotkey` config support on the Node side and refreshed overlay snapshot presentation on config writes.
+- Documented the new shortcut path and the `null` disable path in the README and repo docs.
+
+## Validation
+- `npm run check`
+- `npm run build`
+- `node dist/cli.js config get overlayHotkey`
+
+## Remaining next steps
+- Confirm the default shortcut feels right in daily use and change the default only if it collides with your normal macOS app workflow.
+
+## Refreshed on 2026-04-23 after overlay-control and reprompt hardening pass
+
+## Completed now
+- Added explicit `navex overlay show`, `navex overlay hide`, and `navex overlay toggle` commands for manual overlay visibility.
+- Added a dedicated helper control file so overlay visibility can change without waiting for a session-state delta.
+- Fixed standalone overlay commands so they reuse an already-running helper instead of spawning a fresh one from every short-lived CLI process.
+- Reworked inline reprompt for Terminal.app and iTerm2 so it now selects the matched terminal session and sends actual keyboard input plus Return.
+- Updated the public README and repo docs to reflect the new overlay control path and the removal of the stale dismiss language.
+
+## Validation
+- `npm run build`
+- `npm run check`
+
+## Remaining next steps
+- Bind `navex overlay toggle` to your preferred macOS trigger and confirm the focused-session reprompt flow feels right in normal use.
+
 ## Refreshed on 2026-04-23 after live overlay-row state pass
 
 ## Completed now
