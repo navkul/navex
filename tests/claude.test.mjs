@@ -83,7 +83,7 @@ test('real hook CLI sends namespaced Claude events and final message over IPC', 
         socket.on('end', () => resolve(JSON.parse(body)));
       }));
       const child = spawn(process.execPath, ['dist/cli.js', 'hook', hook, '--agent', 'claude'], {
-        env: { ...process.env, CLAUDE_CODE_ENTRYPOINT: 'claude-desktop' }, stdio: ['pipe', 'ignore', 'pipe']
+        env: { ...process.env, CLAUDE_CODE_ENTRYPOINT: 'claude-desktop', NAVEX_SESSION_NAME: 'ignored-legacy-name' }, stdio: ['pipe', 'ignore', 'pipe']
       });
       child.stdin.end(JSON.stringify({ session_id: 'same-id', cwd: '/tmp', last_assistant_message: 'Implemented Claude support.' }));
       const [code] = await once(child, 'exit');
@@ -91,6 +91,7 @@ test('real hook CLI sends namespaced Claude events and final message over IPC', 
       const payload = await received;
       assert.equal(payload.sessionId, 'claude:same-id');
       assert.equal(payload.agent, 'claude');
+      assert.equal(payload.displayName, undefined);
       assert.equal(payload.surface, 'desktop');
       assert.equal(payload.type, type);
       if (hook === 'stop') assert.equal(payload.lastAssistantMessage, 'Implemented Claude support.');

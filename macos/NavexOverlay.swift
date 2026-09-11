@@ -442,14 +442,6 @@ final class OverlayStateStore {
         orderedSessionIds
     }
 
-    func insertIfNeeded(sessionId: String) {
-        guard !orderedSessionIds.contains(sessionId) else {
-            return
-        }
-        orderedSessionIds.insert(sessionId, at: 0)
-        save()
-    }
-
     func moveToTop(sessionId: String) {
         orderedSessionIds.removeAll { $0 == sessionId }
         orderedSessionIds.insert(sessionId, at: 0)
@@ -1499,34 +1491,6 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
             logger.log("launchError command=\(command.executable) error=\(error.localizedDescription)")
             return false
         }
-    }
-}
-
-private extension NSBezierPath {
-    var cgPath: CGPath {
-        let path = CGMutablePath()
-        var points = [NSPoint](repeating: .zero, count: 3)
-
-        for index in 0..<elementCount {
-            switch element(at: index, associatedPoints: &points) {
-            case .moveTo:
-                path.move(to: points[0])
-            case .lineTo:
-                path.addLine(to: points[0])
-            case .curveTo:
-                path.addCurve(to: points[2], control1: points[0], control2: points[1])
-            case .cubicCurveTo:
-                path.addCurve(to: points[2], control1: points[0], control2: points[1])
-            case .quadraticCurveTo:
-                path.addQuadCurve(to: points[1], control: points[0])
-            case .closePath:
-                path.closeSubpath()
-            @unknown default:
-                break
-            }
-        }
-
-        return path
     }
 }
 

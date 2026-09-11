@@ -125,10 +125,9 @@ program
   .command('launch')
   .description('Launch Codex with optional terminal-focus metadata (not required for tracking)')
   .allowUnknownOption(true)
-  .option('-N, --session-name <name>', 'custom session name')
   .argument('[args...]')
-  .action((args: string[], options: { sessionName?: string }) => {
-    launchCodex(args, options.sessionName);
+  .action((args: string[]) => {
+    launchCodex(args);
   });
 
 program

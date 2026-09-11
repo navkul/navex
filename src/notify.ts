@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { loadConfig, overlayControlPath, overlayHelperLogPath, overlaySnapshotPath, overlayStatePath } from './config.js';
 import { listSessions } from './session-registry.js';
-import { AgentProvider, NavigationPrecision, SessionKind, SessionRecord, SessionStatus, SessionSurface, SessionUsageSnapshot, SummaryState } from './types.js';
+import { AgentProvider, SessionKind, SessionRecord, SessionStatus, SessionUsageSnapshot, SummaryState } from './types.js';
 
 interface OverlayCommand {
   executable: string;
@@ -19,9 +19,6 @@ interface OverlayEvent {
   displayName?: string;
   summary?: string;
   kind?: SessionKind;
-  surface?: SessionSurface;
-  navigationPrecision?: NavigationPrecision;
-  sourceLabel?: string;
   status?: SessionStatus;
   cloudStatus?: string;
   cloudDetail?: string;
@@ -85,9 +82,6 @@ function overlayShowEvent(session: SessionRecord, presentation = currentPresenta
     displayName: session.displayName,
     summary: message,
     kind: session.kind ?? 'codex-thread',
-    surface: session.surface ?? 'unknown',
-    navigationPrecision: session.navigationPrecision ?? 'application-only',
-    sourceLabel: sourceLabel(session),
     status: session.status,
     cloudStatus: session.cloudTask?.cloudStatus,
     cloudDetail: cloudOverlayDetail(session),
@@ -195,22 +189,6 @@ function overlaySummary(session: SessionRecord): string {
     ? cloudOverlaySummary(session)
     : 'Finished. Open the session when you are ready to continue.';
   return truncate(session.lastSummary ?? fallback, config.overlaySummaryMaxChars);
-}
-
-function sourceLabel(session: SessionRecord): string {
-  switch (session.surface) {
-    case 'desktop':
-      return 'Desktop';
-    case 'cli':
-      return 'CLI';
-    case 'vscode':
-      return 'Editor';
-    case 'cloud':
-      return 'Cloud';
-    case 'unknown':
-    default:
-      return session.kind === 'cloud-task' ? 'Cloud' : 'Codex';
-  }
 }
 
 function cloudOverlaySummary(session: SessionRecord): string {

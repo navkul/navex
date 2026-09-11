@@ -13,7 +13,7 @@ interface LaunchTerminalMetadata {
   terminalTty?: string;
 }
 
-export function launchCodex(args: string[], customName?: string): void {
+export function launchCodex(args: string[]): void {
   const codexBin = resolveCodexBinary();
   const terminalApp = process.env.TERM_PROGRAM ?? '';
   const metadata = captureTerminalMetadata(terminalApp);
@@ -25,7 +25,6 @@ export function launchCodex(args: string[], customName?: string): void {
     env: {
       ...process.env,
       NAVEX_LAUNCH_PID: String(process.pid),
-      NAVEX_SESSION_NAME: customName ?? '',
       NAVEX_TERMINAL_APP: terminalApp,
       NAVEX_TERMINAL_WINDOW_ID: metadata.terminalWindowId ?? '',
       NAVEX_TERMINAL_TAB_INDEX: String(metadata.terminalTabIndex ?? ''),
