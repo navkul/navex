@@ -2,8 +2,8 @@
 
 A personal macOS menu-bar companion for Codex and Claude Code.
 
-<p align="center">
-  <img src="docs/images/navex-overlay.png" alt="Navex overlay showing Claude and Codex sessions with working status and a completion summary" width="680">
+<p >
+  <img src="docs/images/navex-overlay.png" alt="Navex overlay showing Claude and Codex sessions with working status and a completion summary" width="440">
 </p>
 
 ## Features
