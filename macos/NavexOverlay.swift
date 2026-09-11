@@ -532,6 +532,12 @@ final class OverlayRowView: NSView {
         dot.layer?.cornerRadius = 3
         dot.layer?.backgroundColor = stateColor(item.state).cgColor
 
+        let agentIcon = NSImageView()
+        agentIcon.translatesAutoresizingMaskIntoConstraints = false
+        agentIcon.image = openAIMarkImage()
+        agentIcon.imageScaling = .scaleProportionallyUpOrDown
+        agentIcon.setAccessibilityLabel("OpenAI agent")
+
         let title = label(item.displayName, size: 13, color: NSColor.labelColor.withAlphaComponent(0.95), weight: .semibold)
         title.lineBreakMode = .byTruncatingTail
 
@@ -568,6 +574,7 @@ final class OverlayRowView: NSView {
         titleRow.translatesAutoresizingMaskIntoConstraints = false
         titleRow.setContentCompressionResistancePriority(.required, for: .vertical)
         titleRow.setContentHuggingPriority(.required, for: .vertical)
+        titleRow.addArrangedSubview(agentIcon)
         titleRow.addArrangedSubview(title)
         titleRow.addArrangedSubview(dot)
 
@@ -603,6 +610,8 @@ final class OverlayRowView: NSView {
             widthAnchor.constraint(equalToConstant: CGFloat(presentation.width) - 32),
             dot.widthAnchor.constraint(equalToConstant: Metrics.dotSize),
             dot.heightAnchor.constraint(equalToConstant: Metrics.dotSize),
+            agentIcon.widthAnchor.constraint(equalToConstant: 14),
+            agentIcon.heightAnchor.constraint(equalToConstant: 14),
             title.widthAnchor.constraint(lessThanOrEqualTo: contentColumn.widthAnchor),
             summary.widthAnchor.constraint(equalTo: contentColumn.widthAnchor),
             summary.heightAnchor.constraint(greaterThanOrEqualToConstant: Metrics.summaryMinHeight),
@@ -748,7 +757,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
     private let rootView = FlippedView(frame: NSRect(x: 0, y: 0, width: 384, height: 180))
     private let backgroundView = FlippedView()
     private let headerTitle = NSTextField(labelWithString: "Navex")
-    private let headerSubtitle = NSTextField(labelWithString: "0 agents working")
+    private let headerSubtitle = NSTextField(labelWithString: "0 agents active")
     private let headerUsagePrimary = NSTextField(labelWithString: "")
     private let headerUsageSecondary = NSTextField(labelWithString: "")
     private let scrollView = NSScrollView()
@@ -1185,7 +1194,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
     private func headerSubtitleText() -> String {
         let activeCount = items.values.filter { $0.status == .active }.count
         guard activeCount > 0 else {
-            return "0 agents working"
+            return "0 agents active"
         }
 
         let noun = activeCount == 1 ? "agent" : "agents"
@@ -1389,9 +1398,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
                 guard let self else {
                     return
                 }
-                if success {
-                    self.overlayWindow?.orderOut(nil)
-                } else {
+                if !success {
                     self.logger.log("openSession failed sessionId=\(sessionId)")
                     self.loadSnapshotIfNeeded(reason: "focus-failed", allowSameRaw: true)
                     NSSound.beep()
@@ -1500,6 +1507,17 @@ private extension NSBezierPath {
 
         return path
     }
+}
+
+private func openAIMarkImage() -> NSImage? {
+    if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.openai.codex"),
+       let appBundle = Bundle(url: appURL),
+       let imageURL = appBundle.url(forResource: "icon-chatgpt", withExtension: "png"),
+       let image = NSImage(contentsOf: imageURL) {
+        return image
+    }
+
+    return NSImage(systemSymbolName: "sparkles", accessibilityDescription: "OpenAI")
 }
 
 let app = NSApplication.shared
