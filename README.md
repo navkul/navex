@@ -74,10 +74,10 @@ codex
 
 Or start a task normally in Codex Desktop. Both surfaces use the same working/done lifecycle in Navex.
 
-The optional compatibility launcher can attach a custom name and additional terminal metadata:
+Session names are automatic Roman numerals, counted separately for Claude and Codex. Custom session names are not supported. The optional compatibility launcher can attach additional terminal metadata:
 
 ```bash
-navex launch -N api-migration
+navex launch
 ```
 
 When an agent finishes, Navex brings the overlay forward with its final message summary. Use the open button to return to the exact Desktop task or originating terminal, then continue there. Navex does not accept commands or submit prompts from the overlay.

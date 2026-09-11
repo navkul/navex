@@ -1,8 +1,6 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { registryPath } from './config.js';
-import { AgentProvider, CloudTaskSession, DaemonEvent, NavigationPrecision, RegistryFile, SessionRecord, SessionSurface, SessionUsageSnapshot, SummaryState } from './types.js';
-
-const DEFAULT_NAME_PATTERN = /^(?:(?:codex|claude) \d+|[IVXLCDM]+)$/;
+import { CloudTaskSession, DaemonEvent, NavigationPrecision, RegistryFile, SessionRecord, SessionSurface, SessionUsageSnapshot, SummaryState } from './types.js';
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -37,23 +35,6 @@ export function saveRegistry(registry: RegistryFile): void {
   renameSync(temporary, file);
 }
 
-export function allocateDisplayName(registry: RegistryFile, preferred?: string, sessionId?: string, agent: AgentProvider = 'codex'): string {
-  const requested = preferred?.trim();
-  if (requested) {
-    if (!displayNameInUse(registry, requested, sessionId)) {
-      return requested;
-    }
-
-    let suffix = 2;
-    while (displayNameInUse(registry, `${requested} ${suffix}`, sessionId)) {
-      suffix += 1;
-    }
-    return `${requested} ${suffix}`;
-  }
-
-  return nextDefaultDisplayName(registry, sessionId, agent);
-}
-
 export function upsertFromEvent(event: DaemonEvent): SessionRecord {
   if (!event.sessionId) {
     throw new Error(`Cannot upsert session without sessionId for event: ${event.type}`);
@@ -63,7 +44,6 @@ export function upsertFromEvent(event: DaemonEvent): SessionRecord {
   const existing = registry.sessions[event.sessionId];
   const eventIsStale = existing !== undefined && event.timestamp < existing.updatedAt;
   const createdAt = existing?.createdAt ?? event.timestamp ?? nowIso();
-  const isCustomName = existing?.isCustomName ?? isRequestedCustomName(event.displayName, existing);
   const session: SessionRecord = {
     sessionId: event.sessionId,
     agent: event.agent ?? existing?.agent ?? 'codex',
@@ -74,8 +54,7 @@ export function upsertFromEvent(event: DaemonEvent): SessionRecord {
     lastCompletedTurnId: !eventIsStale && event.type === 'session-stop'
       ? event.turnId ?? existing?.lastCompletedTurnId
       : existing?.lastCompletedTurnId,
-    displayName: existing?.displayName ?? allocateDisplayName(registry, event.displayName, event.sessionId, event.agent ?? existing?.agent ?? 'codex'),
-    isCustomName,
+    displayName: existing?.displayName ?? '', // Assigned by normalizeRegistry below.
     cwd: event.cwd ?? existing?.cwd ?? process.cwd(),
     launcherPid: event.launcherPid ?? existing?.launcherPid,
     terminalApp: event.terminalApp ?? existing?.terminalApp,
@@ -150,7 +129,6 @@ export function upsertCloudTask(task: CloudTaskSession, summary?: string): Sessi
     surface: 'cloud',
     navigationPrecision: task.url ? 'exact-thread' : 'application-only',
     displayName: cloudDisplayName(task),
-    isCustomName: true,
     cwd: existing?.cwd ?? process.cwd(),
     createdAt: existing?.createdAt ?? timestamp,
     updatedAt: timestamp,
@@ -206,13 +184,6 @@ export function markSessionsByLauncherPidDone(launcherPid: number): SessionRecor
   return sessions;
 }
 
-export function pruneStaleSessions(): string[] {
-  // Session identity belongs to Codex, not to a launcher process. Rows remain
-  // available until the user removes them, including Desktop sessions which
-  // never have a terminal PID.
-  return [];
-}
-
 function normalizeRegistry(registry: RegistryFile): void {
   delete (registry as RegistryFile & { nextDefaultName?: number }).nextDefaultName;
 
@@ -224,7 +195,7 @@ function normalizeRegistry(registry: RegistryFile): void {
     session.agent = session.sessionId.startsWith('claude:') ? 'claude' : session.agent ?? 'codex';
     session.surface ??= inferSurface(session);
     session.navigationPrecision ??= inferNavigationPrecision(session);
-    session.isCustomName ??= !DEFAULT_NAME_PATTERN.test(session.displayName);
+    delete (session as SessionRecord & { isCustomName?: boolean }).isCustomName;
     // "waiting" was the old reprompt-oriented name for a finished local turn.
     if (session.kind === 'codex-thread' && session.status === 'waiting') {
       session.status = 'done';
@@ -233,25 +204,16 @@ function normalizeRegistry(registry: RegistryFile): void {
 
   const defaultSessions = Object.values(registry.sessions)
     .filter((session) => session.kind === 'codex-thread')
-    .filter((session) => !session.isCustomName)
     .sort((a, b) => {
       const byCreatedAt = a.createdAt.localeCompare(b.createdAt);
       return byCreatedAt === 0 ? a.sessionId.localeCompare(b.sessionId) : byCreatedAt;
     });
 
-  const customNames = new Set(
-    Object.values(registry.sessions)
-      .filter((session) => session.isCustomName)
-      .map((session) => `${session.agent ?? 'codex'}:${session.displayName}`)
-  );
   const nextNumbers = { codex: 1, claude: 1 };
 
   for (const session of defaultSessions) {
     const agent = session.agent ?? 'codex';
-    let nextNumber = nextNumbers[agent];
-    while (customNames.has(`${agent}:${defaultDisplayName(nextNumber)}`)) {
-      nextNumber += 1;
-    }
+    const nextNumber = nextNumbers[agent];
     session.displayName = defaultDisplayName(nextNumber);
     nextNumbers[agent] = nextNumber + 1;
   }
@@ -287,19 +249,6 @@ function cloudDisplayName(task: CloudTaskSession): string {
   return task.environmentLabel?.trim() || task.environmentId?.trim() || 'Codex Cloud';
 }
 
-function nextDefaultDisplayName(registry: RegistryFile, sessionId?: string, agent: AgentProvider = 'codex'): string {
-  const usedNames = new Set(
-    Object.values(registry.sessions)
-      .filter((session) => session.sessionId !== sessionId && (session.agent ?? 'codex') === agent)
-      .map((session) => session.displayName)
-  );
-  let nextNumber = 1;
-  while (usedNames.has(defaultDisplayName(nextNumber))) {
-    nextNumber += 1;
-  }
-  return defaultDisplayName(nextNumber);
-}
-
 function defaultDisplayName(value: number): string {
   const numerals: Array<[number, string]> = [
     [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
@@ -315,23 +264,6 @@ function defaultDisplayName(value: number): string {
     }
   }
   return result;
-}
-
-function isRequestedCustomName(preferred: string | undefined, existing: SessionRecord | undefined): boolean {
-  const requested = preferred?.trim();
-  if (requested) {
-    return true;
-  }
-  if (existing?.isCustomName !== undefined) {
-    return existing.isCustomName;
-  }
-  return existing ? !DEFAULT_NAME_PATTERN.test(existing.displayName) : false;
-}
-
-function displayNameInUse(registry: RegistryFile, displayName: string, sessionId?: string): boolean {
-  return Object.values(registry.sessions).some((session) => {
-    return session.sessionId !== sessionId && session.displayName === displayName;
-  });
 }
 
 function statusForEvent(event: DaemonEvent, existing: SessionRecord | undefined): SessionRecord['status'] {

@@ -11,7 +11,6 @@ export async function runSessionStartHook(): Promise<void> {
     type: 'register-session',
     ...hookSessionIdentity(payload.session_id),
     cwd: payload.cwd,
-    displayName: process.env.NAVEX_SESSION_NAME || undefined,
     surface: origin.surface,
     navigationPrecision: origin.navigationPrecision,
     launcherPid: parseNumber(process.env.NAVEX_LAUNCH_PID),

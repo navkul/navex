@@ -32,7 +32,6 @@ export interface SessionRecord {
   turnId?: string;
   lastCompletedTurnId?: string;
   displayName: string;
-  isCustomName?: boolean;
   cwd: string;
   launcherPid?: number;
   terminalApp?: string;
@@ -90,7 +89,6 @@ export interface DaemonEvent {
   agent?: AgentProvider;
   turnId?: string;
   cwd?: string;
-  displayName?: string;
   surface?: SessionSurface;
   navigationPrecision?: NavigationPrecision;
   lastAssistantMessage?: string | null;
