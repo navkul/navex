@@ -1,9 +1,10 @@
+import { parse, stringify } from 'smol-toml';
+import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import path from 'node:path';
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync, copyFileSync, renameSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, renameSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { ensureAppRoot } from './config.js';
-import { findExecutableOnPath } from './codex-path.js';
 
 export function installMessage(_shell: 'zsh' | 'bash'): string {
   ensureAppRoot();
@@ -34,11 +35,8 @@ export function installMessage(_shell: 'zsh' | 'bash'): string {
 
 export function renderHooksJson(): string {
   const cliPath = fileURLToPath(new URL('./cli.js', import.meta.url));
-  const navexBin = resolveLinkedNavexBin(cliPath);
   const hookCommand = (event: 'session-start' | 'user-prompt-submit' | 'stop' | 'interrupt' | 'session-end') => {
-    return navexBin
-      ? `${navexBin} hook ${event}`
-      : `${process.execPath} ${cliPath} hook ${event}`;
+    return `${shellQuote(process.execPath)} ${shellQuote(cliPath)} hook ${event}`;
   };
 
   return JSON.stringify({
@@ -108,19 +106,6 @@ export function renderHooksJson(): string {
   }, null, 2);
 }
 
-function resolveLinkedNavexBin(cliPath: string): string | null {
-  const navexBin = findExecutableOnPath('navex');
-  if (!navexBin) {
-    return null;
-  }
-
-  try {
-    return realpathSync(navexBin) === realpathSync(cliPath) ? navexBin : null;
-  } catch {
-    return null;
-  }
-}
-
 function shellQuote(value: string): string {
   return "'" + value.replace(/'/g, "'\\''") + "'";
 }
@@ -139,26 +124,88 @@ export function renderClaudeHooks(): { hooks: Record<string, Array<{ hooks: Arra
   }] }]])) };
 }
 
+interface HookHandler {
+  type?: string;
+  command?: string;
+  [key: string]: unknown;
+}
+interface HookGroup {
+  hooks: HookHandler[];
+  [key: string]: unknown;
+}
+type HookSettings = Record<string, unknown> & { hooks?: Record<string, HookGroup[]> };
+
 export function installClaudeHooks(): string {
   const settingsPath = path.join(process.env.CLAUDE_CONFIG_DIR || path.join(homedir(), '.claude'), 'settings.json');
-  mkdirSync(path.dirname(settingsPath), { recursive: true });
-  const settings = existsSync(settingsPath) ? JSON.parse(readFileSync(settingsPath, 'utf8')) : {};
-  settings.hooks ??= {};
-  for (const [event, groups] of Object.entries(renderClaudeHooks().hooks)) {
-    const existing = settings.hooks[event] ?? [];
-    // Replace only our own handlers; preserve other hooks and matcher groups.
-    settings.hooks[event] = existing.map((group: { hooks: Array<{ command?: string }> }) => ({
-      ...group,
-      hooks: group.hooks.filter((hook) => !isNavexClaudeHook(hook.command))
-    })).filter((group: { hooks: unknown[] }) => group.hooks.length > 0).concat(groups);
-  }
-  if (existsSync(settingsPath)) copyFileSync(settingsPath, `${settingsPath}.navex-backup-${Date.now()}`);
-  const temporary = `${settingsPath}.${process.pid}.tmp`;
-  writeFileSync(temporary, JSON.stringify(settings, null, 2) + '\n', { mode: 0o600 });
-  renameSync(temporary, settingsPath);
+  const settings = mergeHooks(readSettings(settingsPath), renderClaudeHooks().hooks, 'claude');
+  writeWithBackup(settingsPath, JSON.stringify(settings, null, 2) + '\n');
   return settingsPath;
 }
 
-function isNavexClaudeHook(command?: string): boolean {
-  return !!command && command.includes('navex') && / hook (session-start|user-prompt-submit|stop|session-end) --agent claude$/.test(command);
+export function installCodexHooks(): string[] {
+  const root = process.env.CODEX_HOME || path.join(homedir(), '.codex');
+  const hooksPath = path.join(root, 'hooks.json');
+  const configPath = path.join(root, 'config.toml');
+  // Validate both inputs before touching either file.
+  const settings = mergeHooks(readSettings(hooksPath), JSON.parse(renderHooksJson()).hooks, 'codex');
+  const original = existsSync(configPath) ? readFileSync(configPath, 'utf8') : '';
+  const config = parse(original, { integersAsBigInt: 'asNeeded' });
+  if (config.features !== undefined && !isObject(config.features)) {
+    throw new Error(`${configPath}: expected features to be a table; no Codex files changed.`);
+  }
+  const features = (config.features ??= {}) as Record<string, boolean>;
+  const alreadyEnabled = features.hooks === true;
+  features.hooks = true;
+  const updated = alreadyEnabled ? original : stringify(config);
+  writeWithBackup(hooksPath, JSON.stringify(settings, null, 2) + '\n');
+  writeWithBackup(configPath, updated);
+  return [hooksPath, configPath];
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return Object.prototype.toString.call(value) === '[object Object]';
+}
+
+function readSettings(file: string): HookSettings {
+  const settings: unknown = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {};
+  if (!isObject(settings) || (settings.hooks !== undefined && !isObject(settings.hooks))) {
+    throw new Error(`${file}: expected a settings object with a hooks object; file unchanged.`);
+  }
+  return settings as HookSettings;
+}
+
+function mergeHooks(settings: HookSettings, additions: Record<string, HookGroup[]>, agent: 'claude' | 'codex'): HookSettings {
+  settings.hooks ??= {};
+  for (const [event, groups] of Object.entries(additions)) {
+    const existing = settings.hooks[event] ?? [];
+    if (!Array.isArray(existing) || existing.some(group => !isObject(group) || !Array.isArray(group.hooks) || group.hooks.some(hook => !isObject(hook)))) {
+      throw new Error(`Invalid ${event} hook configuration; settings unchanged.`);
+    }
+    settings.hooks[event] = existing.map(group => ({
+      ...group,
+      hooks: group.hooks.filter(hook => !isNavexHook(hook.command, agent))
+    })).filter(group => group.hooks.length > 0).concat(groups);
+  }
+  return settings;
+}
+
+function isNavexHook(command: unknown, agent: 'claude' | 'codex'): boolean {
+  if (typeof command !== 'string') return false;
+  // Match executable paths, not arbitrary scripts that merely mention Navex.
+  const executable = String.raw`(?:'[^']*'|"[^"]*"|[^\s'"])+`;
+  const match = command.match(new RegExp(`^(${executable})(?:\\s+(${executable}))?\\s+hook\\s+(?:session-start|user-prompt-submit|stop|interrupt|session-end)(?:\\s+--agent\\s+(claude|codex))?$`));
+  if (!match || (match[3] ?? 'codex') !== agent) return false;
+  if (match[2] && path.basename(match[1].replace(/['"]/g, '')) !== 'node') return false;
+  const target = (match[2] ?? match[1]).replace(/['"]/g, '');
+  return path.basename(target) === 'navex' || /[/\\]navex[/\\]dist[/\\]cli\.js$/.test(target)
+    || target === fileURLToPath(new URL('./cli.js', import.meta.url));
+}
+
+function writeWithBackup(file: string, content: string): void {
+  if (existsSync(file) && readFileSync(file, 'utf8') === content) return;
+  mkdirSync(path.dirname(file), { recursive: true });
+  if (existsSync(file)) copyFileSync(file, `${file}.navex-backup-${randomUUID()}`);
+  const temporary = `${file}.${process.pid}.tmp`;
+  writeFileSync(temporary, content, { mode: 0o600 });
+  renameSync(temporary, file);
 }

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { setup } from './setup.js';
 import { Command } from 'commander';
 import { runDaemon } from './daemon.js';
 import { focusSession } from './focus.js';
@@ -128,6 +129,15 @@ program
   .argument('[args...]')
   .action((args: string[]) => {
     launchCodex(args);
+  });
+
+program
+  .command('setup')
+  .description('Configure agent tracking and start Navex at login')
+  .option('--claude', 'set up Claude Code CLI and local Desktop sessions')
+  .option('--codex', 'set up Codex CLI and Desktop sessions')
+  .action((options: { claude?: boolean; codex?: boolean }) => {
+    process.stdout.write(setup(options) + '\n');
   });
 
 program

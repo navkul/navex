@@ -32,49 +32,21 @@ npm link
 
 Navex builds automatically during installation. Keep the cloned folder in place.
 
-### 2. Connect your agents
+### 2. Set up your agents
 
-Set up either or both providers.
-
-**Claude Code — CLI and desktop**
+Run either command, or both:
 
 ```bash
-navex install --agent claude --apply
+navex setup --claude
+navex setup --codex
 ```
 
-This updates `~/.claude/settings.json`, preserving existing settings and saving a backup. Restart existing Claude Code sessions and the Claude desktop app.
+Each command configures tracking, preserves existing settings with backups, and starts Navex now and at login. No manual configuration edits are needed.
 
-**Codex — CLI and desktop**
+- **Claude Code:** restart existing Code sessions and Claude Desktop.
+- **Codex:** start Codex, run `/hooks`, and trust the Navex **SessionStart**, **UserPromptSubmit**, **Stop**, **Interrupt**, and **SessionEnd** hooks. Then restart Codex Desktop. This trust review must be completed in Codex.
 
-1. Print the setup instructions:
-
-   ```bash
-   navex install --agent codex
-   ```
-
-2. Copy the printed JSON into `~/.codex/hooks.json`. If the file already contains hooks, merge the new entries instead of replacing it.
-3. Enable hooks in `~/.codex/config.toml` (update the existing `[features]` section if present):
-
-   ```toml
-   [features]
-   hooks = true
-   ```
-
-4. Start a Codex CLI session, run `/hooks`, and trust the Navex **SessionStart**, **UserPromptSubmit**, **Stop**, **Interrupt**, and **SessionEnd** hooks. Restart Codex Desktop afterward.
-
-### 3. Start the overlay
-
-```bash
-navex overlay install-login
-```
-
-This starts the overlay now and at each macOS login, so **⌘⌥K** is always available. To show it immediately:
-
-```bash
-navex overlay show
-```
-
-Automatic startup is optional. Remove it with `navex overlay uninstall-login`.
+You can also configure both with `navex setup --claude --codex`. To disable automatic startup later, run `navex overlay uninstall-login`.
 
 ## Use Navex
 
