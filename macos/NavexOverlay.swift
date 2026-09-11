@@ -146,7 +146,7 @@ private let overlayIso8601Formatter: ISO8601DateFormatter = {
     return formatter
 }()
 
-private let workingAnimationFrames = [".", "..", "...", ".."]
+private let workingAnimationFrames = [".", "..", "..."]
 
 private func workingAnimationSuffix(step: Int) -> String {
     workingAnimationFrames[step % workingAnimationFrames.count]
@@ -965,7 +965,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
     }
 
     private func advanceWorkingAnimation() {
-        workingAnimationStep = (workingAnimationStep + 1) % 4
+        workingAnimationStep = (workingAnimationStep + 1) % workingAnimationFrames.count
         headerSubtitle.stringValue = headerSubtitleText()
         for case let row as OverlayRowView in rowsContainer.subviews {
             row.updateWorkingAnimation(step: workingAnimationStep)
