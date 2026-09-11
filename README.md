@@ -1,173 +1,85 @@
 # Navex
 
-Navex is my personal macOS session manager for Codex and Claude Code.
-
-I built it for my own workflow and made the repo public in case it is useful to someone else. It is still opinionated and personal-use-first rather than a polished general product.
-
-Current scope:
-
-- macOS only
-- Codex Desktop and interactive Codex CLI sessions
-- local machine only
-- no `codex exec`
-- no cross-machine sync
+A personal macOS menu-bar companion for Codex and Claude Code.
 
 ## Features
 
-- tracks Codex Desktop and CLI sessions through supported lifecycle hooks
-- uses Codex thread and turn IDs rather than terminal processes as identity
-- native menu-bar overlay for working and finished agents
-- explicit `navex overlay show|hide|toggle` control for the floating overlay
-- global overlay hotkey, defaulting to `cmd+option+k`
-- compact summaries from the supported `Stop.last_assistant_message` field
-- opens the exact Codex Desktop task or focuses the originating terminal session
-- updates finished agents back to working when you submit the next prompt
-- persisted local state across daemon/helper restarts
-- drag-to-reorder tracked agents
-- completion alerts that bring the overlay forward
-- overlay header usage summary
-- config for app label, width, and summary behavior
+- Track working and finished agents from the CLI or desktop apps.
+- Get completion alerts with short summaries.
+- Recognize Claude and Codex by their icons and separate Roman numbering.
+- Open Codex desktop tasks or return to terminal sessions in Terminal.app and iTerm2. Claude desktop rows open the app; select the session there.
+- Reorder, dismiss, and keep tracked sessions across restarts.
+- Track Codex Cloud tasks and customize the overlay label, size, summaries, and hotkey.
 
-Terminal support is centered on:
+Claude desktop support is for local Code sessions, not regular chats or remote/cloud sessions.
 
-- Terminal.app
-- iTerm2
+## Setup
 
-## Install
+### 1. Install Navex
 
-1. Install Node.js 18+.
-2. Install Xcode Command Line Tools so `swiftc` is available.
-3. Clone this repo.
-4. Run:
+Requires macOS, Node.js 18+, Xcode Command Line Tools (`xcode-select --install`), and Codex or Claude Code installed and signed in.
 
 ```bash
+git clone https://github.com/navkul/navex.git
+cd navex
 npm install
-npm run build
 npm link
 ```
 
-5. Print the setup output:
+Navex builds automatically during installation. Keep the cloned folder in place.
 
-```bash
-navex install --shell zsh
-```
+### 2. Connect your agents
 
-6. Write the printed hook JSON to `~/.codex/hooks.json`.
-7. Make sure `~/.codex/config.toml` has:
+Set up either or both providers.
 
-```toml
-[features]
-hooks = true
-```
-
-8. Codex requires hook trust review after hook commands change. Start a new Codex session, run `/hooks`, and trust the Navex `SessionStart`, `UserPromptSubmit`, `Stop`, `Interrupt`, and `SessionEnd` hooks.
-
-No shell wrapper is required. Restart Codex Desktop after installing the hooks so new Desktop tasks load them.
-
-## Usage
-
-Start a tracked CLI session normally:
-
-```bash
-codex
-```
-
-Or start a task normally in Codex Desktop. Both surfaces use the same working/done lifecycle in Navex.
-
-Session names are automatic Roman numerals, counted separately for Claude and Codex. Custom session names are not supported. The optional compatibility launcher can attach additional terminal metadata:
-
-```bash
-navex launch
-```
-
-When an agent finishes, Navex brings the overlay forward with its final message summary. Use the open button to return to the exact Desktop task or originating terminal, then continue there. Navex does not accept commands or submit prompts from the overlay.
-
-## Commands
-
-List tracked sessions:
-
-```bash
-navex sessions
-```
-
-Show, hide, or toggle the overlay:
-
-```bash
-navex overlay show
-navex overlay hide
-navex overlay toggle
-```
-
-Keep the helper running after macOS login so the global hotkey works before any sessions exist:
-
-```bash
-navex overlay install-login
-```
-
-Show config:
-
-```bash
-navex config show
-```
-
-Print config path:
-
-```bash
-navex config path
-```
-
-Set the menu-bar / overlay label:
-
-```bash
-navex config set appDisplayName "Arnav"
-```
-
-Tune the overlay:
-
-```bash
-navex config set overlayHotkey "cmd+option+k"
-navex config set overlayWidth 420
-navex config set overlayShowSummary true
-navex config set overlaySummaryStyle smart
-navex config set overlaySummaryMaxWords 18
-navex config set overlaySummaryMaxChars 140
-```
-
-Disable the global hotkey:
-
-```bash
-navex config set overlayHotkey null
-```
-
-## Local state
-
-Navex stores local state in `~/.navex/`.
-
-Useful files there:
-
-- `config.json`
-- `registry.json`
-- `overlay-control.json`
-- `overlay-state.json`
-- `overlay-snapshot.json`
-- `overlay-helper.log`
-
-## Claude Code (2026-09-11)
-
-Navex also tracks Claude Code CLI sessions and local Code sessions in the Claude desktop app. Install the shared hooks after building:
+**Claude Code — CLI and desktop**
 
 ```bash
 navex install --agent claude --apply
 ```
 
-The installer backs up and merges `~/.claude/settings.json`, preserving other settings and hooks. `CLAUDE_CONFIG_DIR` is honored when set. Restart existing Claude sessions after installation. No shell wrapper is needed. Remote/cloud Claude sessions are outside this local integration.
+This updates `~/.claude/settings.json`, preserving existing settings and saving a backup. Restart existing Claude Code sessions and the Claude desktop app.
 
-Claude rows use the Claude Code pixel crab logo. Roman numerals count separately for each provider: Claude I, Claude II, and Codex I. Existing Codex rows migrate automatically; removing a row only renumbers that provider. The overlay displays the logo plus numeral, while `navex sessions` includes the provider name.
+**Codex — CLI and desktop**
 
-Session start, prompt submission, completion (including the final-response summary), and session end use Claude's lifecycle hooks. Opening CLI rows targets the originating terminal. Opening a desktop row activates Claude; selecting the specific Code session remains manual.
+1. Print the setup instructions:
 
-Validation: `npm run check`, `npm run build`, and `node --test tests/*.test.mjs`.
+   ```bash
+   navex install --agent codex
+   ```
 
-Reference: [Claude's shared Desktop/CLI configuration](https://code.claude.com/docs/en/desktop#shared-configuration) and [hook reference](https://code.claude.com/docs/en/hooks).
+2. Copy the printed JSON into `~/.codex/hooks.json`. If the file already contains hooks, merge the new entries instead of replacing it.
+3. Enable hooks in `~/.codex/config.toml` (update the existing `[features]` section if present):
 
-When switching local builds, restart both the tracking daemon and overlay helper. An older daemon can omit provider metadata even when the new overlay is running.
+   ```toml
+   [features]
+   hooks = true
+   ```
+
+4. Start a Codex CLI session, run `/hooks`, and trust the Navex **SessionStart**, **UserPromptSubmit**, **Stop**, **Interrupt**, and **SessionEnd** hooks. Restart Codex Desktop afterward.
+
+### 3. Start the overlay
+
+```bash
+navex overlay install-login
+```
+
+This starts the overlay now and at each macOS login, so **⌘⌥K** is always available. To show it immediately:
+
+```bash
+navex overlay show
+```
+
+Automatic startup is optional. Remove it with `navex overlay uninstall-login`.
+
+## Use Navex
+
+Run `codex` or `claude` normally, or start a task in the corresponding desktop app. Submit a prompt and Navex will track its progress.
+
+Press **⌘⌥K** to show or hide the overlay. Use the arrow to open a session, drag to reorder, or click × to dismiss a row.
+
+```bash
+navex sessions       # List tracked sessions
+navex config show    # View preferences
+navex --help         # All commands
+```
