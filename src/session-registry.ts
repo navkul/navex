@@ -2,7 +2,7 @@ import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { registryPath } from './config.js';
 import { CloudTaskSession, DaemonEvent, NavigationPrecision, RegistryFile, SessionRecord, SessionSurface, SessionUsageSnapshot, SummaryState } from './types.js';
 
-const DEFAULT_NAME_PATTERN = /^codex \d+$/;
+const DEFAULT_NAME_PATTERN = /^(?:codex \d+|[IVXLCDM]+)$/;
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -244,10 +244,10 @@ function normalizeRegistry(registry: RegistryFile): void {
   let nextNumber = 1;
 
   for (const session of defaultSessions) {
-    while (customNames.has(`codex ${nextNumber}`)) {
+    while (customNames.has(defaultDisplayName(nextNumber))) {
       nextNumber += 1;
     }
-    session.displayName = `codex ${nextNumber}`;
+    session.displayName = defaultDisplayName(nextNumber);
     nextNumber += 1;
   }
 }
@@ -289,10 +289,27 @@ function nextDefaultDisplayName(registry: RegistryFile, sessionId?: string): str
       .map((session) => session.displayName)
   );
   let nextNumber = 1;
-  while (usedNames.has(`codex ${nextNumber}`)) {
+  while (usedNames.has(defaultDisplayName(nextNumber))) {
     nextNumber += 1;
   }
-  return `codex ${nextNumber}`;
+  return defaultDisplayName(nextNumber);
+}
+
+function defaultDisplayName(value: number): string {
+  const numerals: Array<[number, string]> = [
+    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
+    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
+    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']
+  ];
+  let remaining = value;
+  let result = '';
+  for (const [amount, numeral] of numerals) {
+    while (remaining >= amount) {
+      result += numeral;
+      remaining -= amount;
+    }
+  }
+  return result;
 }
 
 function isRequestedCustomName(preferred: string | undefined, existing: SessionRecord | undefined): boolean {

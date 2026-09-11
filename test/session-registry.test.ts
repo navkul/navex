@@ -65,3 +65,32 @@ test('keeps Desktop sessions that do not have launcher processes', { concurrency
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('labels default agents with uppercase Roman numerals', { concurrency: false }, () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'navex-registry-'));
+  const previous = process.env.NAVEX_HOME;
+  process.env.NAVEX_HOME = root;
+
+  try {
+    for (let index = 1; index <= 10; index += 1) {
+      upsertFromEvent({
+        type: 'session-active',
+        sessionId: `thread-${index}`,
+        cwd: '/workspace',
+        surface: 'desktop',
+        navigationPrecision: 'exact-thread',
+        timestamp: `2026-09-09T10:${String(index).padStart(2, '0')}:00.000Z`
+      });
+    }
+
+    const names = new Map(listSessions().map((session) => [session.sessionId, session.displayName]));
+    assert.equal(names.get('thread-1'), 'I');
+    assert.equal(names.get('thread-4'), 'IV');
+    assert.equal(names.get('thread-9'), 'IX');
+    assert.equal(names.get('thread-10'), 'X');
+  } finally {
+    if (previous === undefined) delete process.env.NAVEX_HOME;
+    else process.env.NAVEX_HOME = previous;
+    rmSync(root, { recursive: true, force: true });
+  }
+});
