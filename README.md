@@ -1,6 +1,6 @@
 # Navex
 
-Navex is my personal macOS Codex session manager.
+Navex is my personal macOS session manager for Codex and Claude Code.
 
 I built it for my own workflow and made the repo public in case it is useful to someone else. It is still opinionated and personal-use-first rather than a polished general product.
 
@@ -151,3 +151,23 @@ Useful files there:
 - `overlay-state.json`
 - `overlay-snapshot.json`
 - `overlay-helper.log`
+
+## Claude Code (2026-09-11)
+
+Navex also tracks Claude Code CLI sessions and local Code sessions in the Claude desktop app. Install the shared hooks after building:
+
+```bash
+navex install --agent claude --apply
+```
+
+The installer backs up and merges `~/.claude/settings.json`, preserving other settings and hooks. `CLAUDE_CONFIG_DIR` is honored when set. Restart existing Claude sessions after installation. No shell wrapper is needed. Remote/cloud Claude sessions are outside this local integration.
+
+Claude rows use the Claude Code pixel crab logo. Roman numerals count separately for each provider: Claude I, Claude II, and Codex I. Existing Codex rows migrate automatically; removing a row only renumbers that provider. The overlay displays the logo plus numeral, while `navex sessions` includes the provider name.
+
+Session start, prompt submission, completion (including the final-response summary), and session end use Claude's lifecycle hooks. Opening CLI rows targets the originating terminal. Opening a desktop row activates Claude; selecting the specific Code session remains manual.
+
+Validation: `npm run check`, `npm run build`, and `node --test tests/*.test.mjs`.
+
+Reference: [Claude's shared Desktop/CLI configuration](https://code.claude.com/docs/en/desktop#shared-configuration) and [hook reference](https://code.claude.com/docs/en/hooks).
+
+When switching local builds, restart both the tracking daemon and overlay helper. An older daemon can omit provider metadata even when the new overlay is running.

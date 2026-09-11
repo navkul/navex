@@ -53,6 +53,7 @@ struct OverlayEvent: Decodable {
     let sessionId: String
     let displayName: String?
     let summary: String?
+    let agent: String?
     let kind: String?
     let status: SessionStatus?
     let cloudStatus: String?
@@ -69,6 +70,7 @@ struct OverlayItem {
     let sessionId: String
     let displayName: String
     let summary: String
+    let agent: String
     let kind: String
     let status: SessionStatus
     let cloudStatus: String?
@@ -541,9 +543,9 @@ final class OverlayRowView: NSView {
 
         let agentIcon = NSImageView()
         agentIcon.translatesAutoresizingMaskIntoConstraints = false
-        agentIcon.image = openAIMarkImage()
+        agentIcon.image = item.agent == "claude" ? claudeCodeMarkImage() : openAIMarkImage()
         agentIcon.imageScaling = .scaleProportionallyUpOrDown
-        agentIcon.setAccessibilityLabel("OpenAI agent")
+        agentIcon.setAccessibilityLabel(item.agent == "claude" ? "Claude Code agent" : "OpenAI agent")
 
         let title = label(item.displayName, size: 13, color: NSColor.labelColor.withAlphaComponent(0.95), weight: .semibold)
         title.lineBreakMode = .byTruncatingTail
@@ -1067,6 +1069,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
                 sessionId: event.sessionId,
                 displayName: event.displayName ?? "Codex",
                 summary: event.summary ?? "Finished. Open the session when you are ready to continue.",
+                agent: event.agent ?? "codex",
                 kind: event.kind ?? "codex-thread",
                 status: event.status ?? .done,
                 cloudStatus: event.cloudStatus,
@@ -1524,6 +1527,22 @@ private extension NSBezierPath {
         }
 
         return path
+    }
+}
+
+// Claude Code's pixel crab, drawn at integral coordinates for crisp small icons.
+private func claudeCodeMarkImage() -> NSImage {
+    return NSImage(size: NSSize(width: 14, height: 14), flipped: false) { _ in
+        NSColor(calibratedRed: 0.85, green: 0.47, blue: 0.35, alpha: 1).setFill()
+        NSRect(x: 2, y: 5, width: 10, height: 7).fill()
+        NSRect(x: 0, y: 6, width: 14, height: 3).fill()
+        for x in [2, 5, 8, 11] {
+            NSRect(x: x, y: 2, width: 1, height: 3).fill()
+        }
+        NSColor(calibratedWhite: 0.12, alpha: 1).setFill()
+        NSRect(x: 4, y: 8, width: 1, height: 2).fill()
+        NSRect(x: 9, y: 8, width: 1, height: 2).fill()
+        return true
     }
 }
 

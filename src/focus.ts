@@ -34,6 +34,12 @@ export function focusSession(sessionId: string): void {
   }
 
   if (session.surface === 'desktop' || session.surface === 'unknown') {
+    if (session.agent === 'claude') {
+      if (!activateBundle('com.anthropic.claudefordesktop')) {
+        throw new Error(`Unable to open Claude Desktop for ${session.displayName}`);
+      }
+      return;
+    }
     focusDesktopThread(session.sessionId);
     return;
   }
