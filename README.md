@@ -2,6 +2,10 @@
 
 A personal macOS menu-bar companion for Codex and Claude Code.
 
+<p align="center">
+  <img src="docs/images/navex-overlay.png" alt="Navex overlay showing Claude and Codex sessions with working status and a completion summary" width="680">
+</p>
+
 ## Features
 
 - Track working and finished agents from the CLI or desktop apps.
