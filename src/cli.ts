@@ -7,7 +7,7 @@ import { runSessionEndHook } from './hook-session-end.js';
 import { runSessionStartHook } from './hook-session-start.js';
 import { runStopHook } from './hook-stop.js';
 import { runUserPromptSubmitHook } from './hook-user-prompt-submit.js';
-import { installMessage } from './install.js';
+import { installMessage, installClaudeHooks, renderClaudeHooks } from './install.js';
 import { launchCodex } from './launch.js';
 import { APP_CONFIG_KEYS, AppConfigKey, configPath, loadConfig, saveConfig } from './config.js';
 import {
@@ -37,7 +37,10 @@ program
   .command('hook')
   .description('Internal hook entrypoint')
   .argument('<event>', 'hook event name')
-  .action(async (event: string) => {
+  .option('--agent <agent>', 'agent provider: codex or claude', 'codex')
+  .action(async (event: string, options: { agent: string }) => {
+    if (!['codex', 'claude'].includes(options.agent)) throw new Error(`Unsupported agent: ${options.agent}`);
+    process.env.NAVEX_AGENT = options.agent;
     if (event === 'session-start') {
       await runSessionStartHook();
       return;
@@ -132,7 +135,16 @@ program
   .command('install')
   .description('Print shell integration instructions')
   .option('--shell <shell>', 'shell type', 'zsh')
-  .action((options: { shell: string }) => {
+  .option('--agent <agent>', 'agent provider: codex or claude', 'codex')
+  .option('--apply', 'install Claude hooks while preserving existing settings')
+  .action((options: { shell: string; agent: string; apply?: boolean }) => {
+    if (options.agent === 'claude') {
+      process.stdout.write(options.apply
+        ? `Installed Claude Code hooks in ${installClaudeHooks()}\n`
+        : `Merge into ~/.claude/settings.json (CLI and local Desktop Code sessions):\n${JSON.stringify(renderClaudeHooks(), null, 2)}\nOr run navex install --agent claude --apply\n`);
+      return;
+    }
+    if (options.agent !== 'codex' || options.apply) throw new Error('Use --agent claude with --apply, or omit --apply for Codex instructions.');
     process.stdout.write(`${installMessage(parseShell(options.shell))}\n`);
   });
 
@@ -144,7 +156,7 @@ sessionsCommand
   .action(() => {
     for (const session of listSessions()) {
       const source = session.surface ?? (session.kind === 'cloud-task' ? 'cloud' : 'unknown');
-      process.stdout.write(`${session.displayName}\t${source}\t${session.status}\t${session.cwd}\n`);
+      process.stdout.write(`${session.agent ?? 'codex'} ${session.displayName}\t${source}\t${session.status}\t${session.cwd}\n`);
     }
   });
 

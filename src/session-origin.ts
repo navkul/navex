@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { NavigationPrecision, SessionSurface } from './types.js';
+import { AgentProvider, NavigationPrecision, SessionSurface } from './types.js';
 
 const PROCESS_LOOKUP_TIMEOUT_MS = 250;
 
@@ -20,7 +20,12 @@ export function detectSessionOrigin(env: NodeJS.ProcessEnv = process.env): Sessi
   const originator = nonEmpty(env.CODEX_INTERNAL_ORIGINATOR_OVERRIDE)?.toLowerCase() ?? '';
   const normalizedTerminal = terminalApp?.toLowerCase() ?? '';
 
-  if (originator.includes('desktop')) {
+  const claude = env.NAVEX_AGENT === 'claude';
+  if (claude && env.CLAUDE_CODE_ENTRYPOINT?.startsWith('claude-desktop')) {
+    return { surface: 'desktop', navigationPrecision: 'application-only' };
+  }
+
+  if (!claude && originator.includes('desktop')) {
     return {
       surface: 'desktop',
       navigationPrecision: 'exact-thread'
@@ -106,4 +111,9 @@ function normalizeTty(value: string): string | undefined {
 function nonEmpty(value?: string): string | undefined {
   const trimmed = value?.trim();
   return trimmed || undefined;
+}
+
+export function hookSessionIdentity(sessionId: string): { sessionId: string; agent: AgentProvider } {
+  const agent = process.env.NAVEX_AGENT === 'claude' ? 'claude' : 'codex';
+  return { agent, sessionId: agent === 'claude' ? `claude:${sessionId}` : sessionId };
 }

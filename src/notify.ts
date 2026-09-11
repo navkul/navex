@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { loadConfig, overlayControlPath, overlayHelperLogPath, overlaySnapshotPath, overlayStatePath } from './config.js';
 import { listSessions } from './session-registry.js';
-import { NavigationPrecision, SessionKind, SessionRecord, SessionStatus, SessionSurface, SessionUsageSnapshot, SummaryState } from './types.js';
+import { AgentProvider, NavigationPrecision, SessionKind, SessionRecord, SessionStatus, SessionSurface, SessionUsageSnapshot, SummaryState } from './types.js';
 
 interface OverlayCommand {
   executable: string;
@@ -14,6 +14,7 @@ interface OverlayCommand {
 
 interface OverlayEvent {
   type: 'show';
+  agent?: AgentProvider;
   sessionId: string;
   displayName?: string;
   summary?: string;
@@ -79,6 +80,7 @@ function overlayShowEvent(session: SessionRecord, presentation = currentPresenta
   const message = overlaySummary(session);
   return {
     type: 'show',
+    agent: session.agent ?? 'codex',
     sessionId: session.sessionId,
     displayName: session.displayName,
     summary: message,

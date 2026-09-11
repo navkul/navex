@@ -1,3 +1,5 @@
+export type AgentProvider = 'codex' | 'claude';
+
 export type SessionStatus = 'active' | 'done' | 'failed' | 'interrupted' | 'waiting';
 export type SessionKind = 'codex-thread' | 'cloud-task';
 export type SessionSurface = 'desktop' | 'cli' | 'vscode' | 'cloud' | 'unknown';
@@ -23,6 +25,7 @@ export interface SessionUsageSnapshot {
 
 export interface SessionRecord {
   sessionId: string;
+  agent?: AgentProvider;
   kind?: SessionKind;
   surface?: SessionSurface;
   navigationPrecision?: NavigationPrecision;
@@ -84,6 +87,7 @@ export interface HookPayload {
 export interface DaemonEvent {
   type: 'session-stop' | 'session-active' | 'session-interrupt' | 'session-end' | 'register-session' | 'session-exit';
   sessionId?: string;
+  agent?: AgentProvider;
   turnId?: string;
   cwd?: string;
   displayName?: string;

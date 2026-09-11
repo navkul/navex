@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { sendEvent } from './ipc.js';
-import { detectSessionOrigin } from './session-origin.js';
+import { detectSessionOrigin, hookSessionIdentity } from './session-origin.js';
 import { HookPayload } from './types.js';
 
 export async function runSessionStartHook(): Promise<void> {
@@ -9,7 +9,7 @@ export async function runSessionStartHook(): Promise<void> {
 
   await sendEvent({
     type: 'register-session',
-    sessionId: payload.session_id,
+    ...hookSessionIdentity(payload.session_id),
     cwd: payload.cwd,
     displayName: process.env.NAVEX_SESSION_NAME || undefined,
     surface: origin.surface,

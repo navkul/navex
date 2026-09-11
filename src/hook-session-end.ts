@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { sendEvent } from './ipc.js';
-import { detectSessionOrigin } from './session-origin.js';
+import { detectSessionOrigin, hookSessionIdentity } from './session-origin.js';
 import { HookPayload } from './types.js';
 
 export async function runSessionEndHook(): Promise<void> {
@@ -8,7 +8,7 @@ export async function runSessionEndHook(): Promise<void> {
   const origin = detectSessionOrigin();
   await sendEvent({
     type: 'session-end',
-    sessionId: payload.session_id,
+    ...hookSessionIdentity(payload.session_id),
     cwd: payload.cwd,
     surface: origin.surface,
     navigationPrecision: origin.navigationPrecision,

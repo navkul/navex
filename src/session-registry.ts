@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { registryPath } from './config.js';
-import { CloudTaskSession, DaemonEvent, NavigationPrecision, RegistryFile, SessionRecord, SessionSurface, SessionUsageSnapshot, SummaryState } from './types.js';
+import { AgentProvider, CloudTaskSession, DaemonEvent, NavigationPrecision, RegistryFile, SessionRecord, SessionSurface, SessionUsageSnapshot, SummaryState } from './types.js';
 
-const DEFAULT_NAME_PATTERN = /^(?:codex \d+|[IVXLCDM]+)$/;
+const DEFAULT_NAME_PATTERN = /^(?:(?:codex|claude) \d+|[IVXLCDM]+)$/;
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -37,7 +37,7 @@ export function saveRegistry(registry: RegistryFile): void {
   renameSync(temporary, file);
 }
 
-export function allocateDisplayName(registry: RegistryFile, preferred?: string, sessionId?: string): string {
+export function allocateDisplayName(registry: RegistryFile, preferred?: string, sessionId?: string, agent: AgentProvider = 'codex'): string {
   const requested = preferred?.trim();
   if (requested) {
     if (!displayNameInUse(registry, requested, sessionId)) {
@@ -51,7 +51,7 @@ export function allocateDisplayName(registry: RegistryFile, preferred?: string, 
     return `${requested} ${suffix}`;
   }
 
-  return nextDefaultDisplayName(registry, sessionId);
+  return nextDefaultDisplayName(registry, sessionId, agent);
 }
 
 export function upsertFromEvent(event: DaemonEvent): SessionRecord {
@@ -66,6 +66,7 @@ export function upsertFromEvent(event: DaemonEvent): SessionRecord {
   const isCustomName = existing?.isCustomName ?? isRequestedCustomName(event.displayName, existing);
   const session: SessionRecord = {
     sessionId: event.sessionId,
+    agent: event.agent ?? existing?.agent ?? 'codex',
     kind: existing?.kind === 'cloud-task' ? 'cloud-task' : 'codex-thread',
     surface: event.surface ?? existing?.surface ?? inferSurface(existing),
     navigationPrecision: event.navigationPrecision ?? existing?.navigationPrecision ?? inferNavigationPrecision(existing),
@@ -73,7 +74,7 @@ export function upsertFromEvent(event: DaemonEvent): SessionRecord {
     lastCompletedTurnId: !eventIsStale && event.type === 'session-stop'
       ? event.turnId ?? existing?.lastCompletedTurnId
       : existing?.lastCompletedTurnId,
-    displayName: existing?.displayName ?? allocateDisplayName(registry, event.displayName, event.sessionId),
+    displayName: existing?.displayName ?? allocateDisplayName(registry, event.displayName, event.sessionId, event.agent ?? existing?.agent ?? 'codex'),
     isCustomName,
     cwd: event.cwd ?? existing?.cwd ?? process.cwd(),
     launcherPid: event.launcherPid ?? existing?.launcherPid,
@@ -219,6 +220,8 @@ function normalizeRegistry(registry: RegistryFile): void {
     if ((session.kind as string | undefined) !== 'cloud-task') {
       session.kind = 'codex-thread';
     }
+    // Older daemons dropped provider metadata but retained namespaced IDs.
+    session.agent = session.sessionId.startsWith('claude:') ? 'claude' : session.agent ?? 'codex';
     session.surface ??= inferSurface(session);
     session.navigationPrecision ??= inferNavigationPrecision(session);
     session.isCustomName ??= !DEFAULT_NAME_PATTERN.test(session.displayName);
@@ -239,16 +242,18 @@ function normalizeRegistry(registry: RegistryFile): void {
   const customNames = new Set(
     Object.values(registry.sessions)
       .filter((session) => session.isCustomName)
-      .map((session) => session.displayName)
+      .map((session) => `${session.agent ?? 'codex'}:${session.displayName}`)
   );
-  let nextNumber = 1;
+  const nextNumbers = { codex: 1, claude: 1 };
 
   for (const session of defaultSessions) {
-    while (customNames.has(defaultDisplayName(nextNumber))) {
+    const agent = session.agent ?? 'codex';
+    let nextNumber = nextNumbers[agent];
+    while (customNames.has(`${agent}:${defaultDisplayName(nextNumber)}`)) {
       nextNumber += 1;
     }
     session.displayName = defaultDisplayName(nextNumber);
-    nextNumber += 1;
+    nextNumbers[agent] = nextNumber + 1;
   }
 }
 
@@ -282,10 +287,10 @@ function cloudDisplayName(task: CloudTaskSession): string {
   return task.environmentLabel?.trim() || task.environmentId?.trim() || 'Codex Cloud';
 }
 
-function nextDefaultDisplayName(registry: RegistryFile, sessionId?: string): string {
+function nextDefaultDisplayName(registry: RegistryFile, sessionId?: string, agent: AgentProvider = 'codex'): string {
   const usedNames = new Set(
     Object.values(registry.sessions)
-      .filter((session) => session.sessionId !== sessionId)
+      .filter((session) => session.sessionId !== sessionId && (session.agent ?? 'codex') === agent)
       .map((session) => session.displayName)
   );
   let nextNumber = 1;
