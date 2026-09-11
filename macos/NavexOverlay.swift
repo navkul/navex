@@ -146,6 +146,12 @@ private let overlayIso8601Formatter: ISO8601DateFormatter = {
     return formatter
 }()
 
+private let workingAnimationFrames = [".", "..", "...", ".."]
+
+private func workingAnimationSuffix(step: Int) -> String {
+    workingAnimationFrames[step % workingAnimationFrames.count]
+}
+
 final class FlippedView: NSView {
     override var isFlipped: Bool { true }
 }
@@ -501,6 +507,7 @@ final class OverlayRowView: NSView {
     private let removeAction: (String) -> Void
     private let moveAction: (String, NSPoint) -> Void
     private let actionButtonsStack = NSStackView()
+    private let summaryField = NSTextField(wrappingLabelWithString: "")
     private var trackingPoint: NSPoint?
     private var isDraggingRow = false
 
@@ -578,17 +585,17 @@ final class OverlayRowView: NSView {
         titleRow.addArrangedSubview(title)
         titleRow.addArrangedSubview(dot)
 
-        let summary = NSTextField(wrappingLabelWithString: item.summary)
-        summary.font = overlayFont(size: 11, weight: .medium)
-        summary.textColor = NSColor.secondaryLabelColor.withAlphaComponent(0.94)
-        summary.translatesAutoresizingMaskIntoConstraints = false
-        summary.lineBreakMode = .byTruncatingTail
-        summary.maximumNumberOfLines = presentation.summaryMaxLines
-        summary.cell?.wraps = true
-        summary.cell?.usesSingleLineMode = false
-        summary.cell?.truncatesLastVisibleLine = true
-        summary.setContentCompressionResistancePriority(.required, for: .vertical)
-        summary.setContentHuggingPriority(.required, for: .vertical)
+        summaryField.stringValue = item.summary
+        summaryField.font = overlayFont(size: 11, weight: .medium)
+        summaryField.textColor = NSColor.secondaryLabelColor.withAlphaComponent(0.94)
+        summaryField.translatesAutoresizingMaskIntoConstraints = false
+        summaryField.lineBreakMode = .byTruncatingTail
+        summaryField.maximumNumberOfLines = presentation.summaryMaxLines
+        summaryField.cell?.wraps = true
+        summaryField.cell?.usesSingleLineMode = false
+        summaryField.cell?.truncatesLastVisibleLine = true
+        summaryField.setContentCompressionResistancePriority(.required, for: .vertical)
+        summaryField.setContentHuggingPriority(.required, for: .vertical)
 
         let contentColumn = NSView()
         contentColumn.translatesAutoresizingMaskIntoConstraints = false
@@ -600,7 +607,7 @@ final class OverlayRowView: NSView {
         bodyStack.translatesAutoresizingMaskIntoConstraints = false
         bodyStack.addArrangedSubview(titleRow)
         if presentation.summaryVisible {
-            bodyStack.addArrangedSubview(summary)
+            bodyStack.addArrangedSubview(summaryField)
         }
 
         addSubview(contentColumn)
@@ -613,8 +620,8 @@ final class OverlayRowView: NSView {
             agentIcon.widthAnchor.constraint(equalToConstant: 14),
             agentIcon.heightAnchor.constraint(equalToConstant: 14),
             title.widthAnchor.constraint(lessThanOrEqualTo: contentColumn.widthAnchor),
-            summary.widthAnchor.constraint(equalTo: contentColumn.widthAnchor),
-            summary.heightAnchor.constraint(greaterThanOrEqualToConstant: Metrics.summaryMinHeight),
+            summaryField.widthAnchor.constraint(equalTo: contentColumn.widthAnchor),
+            summaryField.heightAnchor.constraint(greaterThanOrEqualToConstant: Metrics.summaryMinHeight),
             contentColumn.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Metrics.horizontalInset),
             contentColumn.topAnchor.constraint(equalTo: topAnchor, constant: Metrics.topInset),
             contentColumn.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -Metrics.bottomInset),
@@ -636,6 +643,13 @@ final class OverlayRowView: NSView {
 
     override var acceptsFirstResponder: Bool {
         true
+    }
+
+    func updateWorkingAnimation(step: Int) {
+        guard status == .active, kind != "cloud-task" else {
+            return
+        }
+        summaryField.stringValue = "Working\(workingAnimationSuffix(step: step))"
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -953,6 +967,9 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
     private func advanceWorkingAnimation() {
         workingAnimationStep = (workingAnimationStep + 1) % 4
         headerSubtitle.stringValue = headerSubtitleText()
+        for case let row as OverlayRowView in rowsContainer.subviews {
+            row.updateWorkingAnimation(step: workingAnimationStep)
+        }
     }
 
     private func startControlPolling() {
@@ -1126,6 +1143,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
                     self?.moveSession(sessionId: sessionId, to: point)
                 }
             )
+            row.updateWorkingAnimation(step: workingAnimationStep)
             let rowHeight = measuredRowHeight(for: row, width: rowWidth)
             row.translatesAutoresizingMaskIntoConstraints = true
             row.frame = NSRect(x: 0, y: y, width: rowWidth, height: rowHeight)
@@ -1198,7 +1216,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
         }
 
         let noun = activeCount == 1 ? "agent" : "agents"
-        let suffix = [".", "..", "...", ".."][workingAnimationStep]
+        let suffix = workingAnimationSuffix(step: workingAnimationStep)
         return "\(activeCount) \(noun) working\(suffix)"
     }
 
