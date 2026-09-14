@@ -3,7 +3,7 @@ import { writeFileSync } from 'node:fs';
 import { overlayControlPath } from './config.js';
 import { ensureOverlayHelper } from './notify.js';
 
-export type OverlayControlAction = 'show' | 'hide' | 'toggle';
+export type OverlayControlAction = 'show' | 'hide' | 'toggle' | 'screen';
 
 interface OverlayControlCommand {
   action: OverlayControlAction;

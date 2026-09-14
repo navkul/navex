@@ -95,6 +95,8 @@ struct OverlayControlCommand: Decodable {
 
 struct OverlayStateFile: Codable {
     var orderedSessionIds: [String]
+    var preferredDisplayUUID: String?
+    var lastScreenCommandID: String?
 }
 
 final class OverlayLogger {
@@ -330,7 +332,7 @@ private func parseHotkeySpec(_ raw: String?) throws -> HotkeySpec? {
 
 final class HotkeyController {
     fileprivate static let signature = OSType(0x4E565858)
-    fileprivate static let hotkeyId: UInt32 = 1
+    fileprivate let hotkeyId: UInt32
 
     fileprivate weak var target: OverlayApp?
     private let logger: OverlayLogger
@@ -338,8 +340,9 @@ final class HotkeyController {
     private var hotKeyRef: EventHotKeyRef?
     private var registeredSpec: HotkeySpec?
 
-    init(target: OverlayApp, logger: OverlayLogger) {
+    init(target: OverlayApp, logger: OverlayLogger, hotkeyId: UInt32 = 1) {
         self.target = target
+        self.hotkeyId = hotkeyId
         self.logger = logger
         installHandler()
     }
@@ -362,7 +365,7 @@ final class HotkeyController {
             return
         }
 
-        let hotKeyID = EventHotKeyID(signature: Self.signature, id: Self.hotkeyId)
+        let hotKeyID = EventHotKeyID(signature: Self.signature, id: hotkeyId)
         let status = RegisterEventHotKey(
             UInt32(spec.keyCode),
             UInt32(spec.modifiers),
@@ -419,23 +422,38 @@ private let hotkeyEventCallback: EventHandlerUPP = { _, eventRef, userData in
         nil,
         &hotKeyID
     )
-    if status != noErr || hotKeyID.signature != HotkeyController.signature || hotKeyID.id != HotkeyController.hotkeyId {
+    if status != noErr || hotKeyID.signature != HotkeyController.signature {
         return OSStatus(eventNotHandledErr)
     }
 
     let controller = Unmanaged<HotkeyController>.fromOpaque(userData).takeUnretainedValue()
-    controller.target?.handleGlobalToggleHotkey()
+    guard hotKeyID.id == controller.hotkeyId else { return OSStatus(eventNotHandledErr) }
+    if hotKeyID.id == 2 {
+        controller.target?.handleGlobalScreenHotkey()
+    } else {
+        controller.target?.handleGlobalToggleHotkey()
+    }
     return noErr
 }
 
 final class OverlayStateStore {
     private let url: URL
     private var orderedSessionIds: [String]
+    private(set) var preferredDisplayUUID: String?
+    private(set) var lastScreenCommandID: String?
 
     init(url: URL) {
         self.url = url
         let loaded = Self.load(url: url)
         self.orderedSessionIds = loaded.orderedSessionIds
+        self.preferredDisplayUUID = loaded.preferredDisplayUUID
+        self.lastScreenCommandID = loaded.lastScreenCommandID
+    }
+
+    func selectDisplay(uuid: String?, commandID: String) {
+        preferredDisplayUUID = uuid
+        lastScreenCommandID = commandID
+        save()
     }
 
     func orderedIds() -> [String] {
@@ -461,7 +479,7 @@ final class OverlayStateStore {
     private func save() {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        let file = OverlayStateFile(orderedSessionIds: orderedSessionIds)
+        let file = OverlayStateFile(orderedSessionIds: orderedSessionIds, preferredDisplayUUID: preferredDisplayUUID, lastScreenCommandID: lastScreenCommandID)
         if let data = try? encoder.encode(file) {
             try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try? data.write(to: url, options: .atomic)
@@ -784,6 +802,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
     private var visibleRowsContentHeight: CGFloat = 1
     private var lastHandledControlId = ""
     private lazy var hotkeyController = HotkeyController(target: self, logger: logger)
+    private lazy var screenHotkeyController = HotkeyController(target: self, logger: logger, hotkeyId: 2)
 
     override init() {
         super.init()
@@ -799,6 +818,8 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
         loadSnapshotIfNeeded(reason: "did-finish", allowSameRaw: true)
         startSnapshotPolling()
         startControlPolling()
+        NotificationCenter.default.addObserver(self, selector: #selector(screensChanged),
+            name: NSApplication.didChangeScreenParametersNotification, object: nil)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
             guard let self else {
                 return
@@ -1017,6 +1038,10 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
 
         logger.log("applyOverlayControl action=\(command.action) commandId=\(command.commandId)")
         switch command.action {
+        case "screen":
+            if stateStore.lastScreenCommandID != command.commandId {
+                selectNextScreen(commandID: command.commandId)
+            }
         case "show":
             showOverlay(reason: "control-show")
         case "hide":
@@ -1199,7 +1224,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
 
     private func statusItemTooltip() -> String {
         if let spec = resolvedHotkeySpec() {
-            return "\(currentAppDisplayName()) overlay toggle: \(spec.display)"
+            return "\(currentAppDisplayName()) overlay toggle: \(spec.display); next display: ⌃⌥⌘K"
         }
         return "\(currentAppDisplayName()) overlay"
     }
@@ -1243,7 +1268,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
                 display: true
             )
         } else {
-            window.setFrame(NSRect(x: 0, y: 0, width: width, height: height), display: true)
+            window.orderOut(nil)
         }
         logger.log("layoutPanel frame=\(NSStringFromRect(window.frame))")
     }
@@ -1326,19 +1351,46 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
     }
 
     private func currentScreenGeometry() -> (screenFrame: NSRect, visibleFrame: NSRect)? {
-        let mouseLocation = NSEvent.mouseLocation
-        if let screen = NSScreen.screens.first(where: { NSMouseInRect(mouseLocation, $0.frame, false) }) {
-            return (screen.frame, screen.visibleFrame)
+        // Choose an initial display once. Thereafter only an explicit user action
+        // changes the persisted selection, regardless of pointer or focus.
+        if stateStore.preferredDisplayUUID == nil, let initial = NSScreen.screens.first {
+            stateStore.selectDisplay(uuid: displayUUID(initial), commandID: "initial")
         }
-
-        if let screen = statusItem.button?.window?.screen {
-            return (screen.frame, screen.visibleFrame)
-        }
-
-        guard let screen = NSScreen.main else {
-            return nil
-        }
+        guard let screen = NSScreen.screens.first(where: {
+            displayUUID($0) == stateStore.preferredDisplayUUID
+        }) else { return nil }
         return (screen.frame, screen.visibleFrame)
+    }
+
+    private func displayID(_ screen: NSScreen) -> CGDirectDisplayID {
+        (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value ?? 0
+    }
+
+    private func displayUUID(_ screen: NSScreen) -> String? {
+        guard let uuid = CGDisplayCreateUUIDFromDisplayID(displayID(screen))?.takeRetainedValue() else { return nil }
+        return CFUUIDCreateString(nil, uuid) as String
+    }
+
+    @objc private func screensChanged() {
+        // Never move to another display automatically when the selected one disconnects.
+        layoutPanel()
+    }
+
+    private func selectNextScreen(commandID: String = UUID().uuidString) {
+        let screens = NSScreen.screens
+        guard !screens.isEmpty else { return }
+        let current = screens.firstIndex { displayUUID($0) == stateStore.preferredDisplayUUID }
+        let selected = screens[current.map { ($0 + 1) % screens.count } ?? 0]
+        guard let uuid = displayUUID(selected) else { return }
+        stateStore.selectDisplay(uuid: uuid, commandID: commandID)
+        logger.log("selectScreen userCycle display=\(selected.localizedName) uuid=\(uuid)")
+        showOverlay(reason: "screen-selected")
+    }
+
+    fileprivate func handleGlobalScreenHotkey() {
+        DispatchQueue.main.async { [weak self] in
+            self?.selectNextScreen()
+        }
     }
 
     @objc private func toggleOverlay() {
@@ -1369,6 +1421,10 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
             return
         }
 
+        guard currentScreenGeometry() != nil else {
+            window.orderOut(nil)
+            return
+        }
         window.collectionBehavior = [.canJoinAllSpaces]
         layoutPanel()
         logger.log("showOverlay reason=\(reason) visibleBefore=\(window.isVisible) activeSpaceBefore=\(window.isOnActiveSpace)")
@@ -1390,6 +1446,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
 
     private func updateHotkeyRegistration() {
         hotkeyController.update(spec: resolvedHotkeySpec())
+        screenHotkeyController.update(spec: try? parseHotkeySpec("ctrl+option+cmd+k"))
     }
 
     private func resolvedHotkeySpec() -> HotkeySpec? {

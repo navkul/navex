@@ -99,6 +99,13 @@ overlayCommand
   });
 
 overlayCommand
+  .command('screen')
+  .description('Move the overlay to the next display (also ⌃⌥⌘K)')
+  .action(() => {
+    sendOverlayControl('screen');
+  });
+
+overlayCommand
   .command('helper')
   .description('Run the native overlay helper in the foreground')
   .option('--show', 'show the overlay after launch')

@@ -54,6 +54,10 @@ Run `codex` or `claude` normally, or start a task in the corresponding desktop a
 
 Press **⌘⌥K** to show or hide the overlay. Use the arrow to open a session, drag to reorder, or click × to dismiss a row.
 
+Press **⌃⌥⌘K** (Control–Option–Command–K) to move Navex to the next connected display and show it. **⌘⌥K** only shows or hides it on the selected display. Your selection survives updates and restarts; pointer position and app focus never change it.
+
+Navex starts on the primary display the first time. If the selected monitor disconnects, the overlay stays hidden until you select an available display with **⌃⌥⌘K**. The terminal equivalent is `navex overlay screen`.
+
 ```bash
 navex sessions       # List tracked sessions
 navex config show    # View preferences
