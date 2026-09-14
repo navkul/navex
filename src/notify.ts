@@ -4,6 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { loadConfig, overlayControlPath, overlayHelperLogPath, overlaySnapshotPath, overlayStatePath } from './config.js';
+import { reconcileClaudeSessions } from './session-liveness.js';
 import { listSessions } from './session-registry.js';
 import { AgentProvider, SessionKind, SessionRecord, SessionStatus, SessionUsageSnapshot, SummaryState } from './types.js';
 
@@ -123,8 +124,15 @@ export function ensureOverlayHelper(showOnLaunch: boolean): ChildProcess | undef
   return child;
 }
 
-export function runOverlayHelperForeground(showOnLaunch: boolean): void {
+export async function runOverlayHelperForeground(showOnLaunch: boolean): Promise<void> {
+  await reconcileClaudeSessions();
   replaceOverlaySnapshot(listSessions());
+  const cleanupTimer = setInterval(() => {
+    void reconcileClaudeSessions().then((changed) => {
+      if (changed) replaceOverlaySnapshot(listSessions());
+    });
+  }, 15_000);
+  cleanupTimer.unref();
   const command = overlayCommand();
   const child = spawn(command, [], {
     stdio: ['ignore', 'ignore', 'ignore'],

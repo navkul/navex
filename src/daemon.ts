@@ -1,8 +1,9 @@
 import net from 'node:net';
+import { reconcileClaudeSessions } from './session-liveness.js';
 import { existsSync, unlinkSync } from 'node:fs';
 import { syncCloudTasksQuietly } from './cloud.js';
 import { loadConfig, socketPath } from './config.js';
-import { getSession, listSessions, markSessionsByLauncherPidDone, setSessionStopSnapshot, upsertFromEvent } from './session-registry.js';
+import { getSession, listSessions, removeSession, markSessionsByLauncherPidDone, setSessionStopSnapshot, upsertFromEvent } from './session-registry.js';
 import { replaceOverlaySnapshot, sendSessionCompletionAlert } from './notify.js';
 import { summarizeAssistantMessage } from './summary.js';
 import { DaemonEvent } from './types.js';
@@ -37,7 +38,8 @@ export function runDaemon(): void {
   server.listen(socket);
   server.on('listening', () => {
     syncCloudTasksQuietly({ limit: '20' });
-    replayTrackedSessions();
+    void refreshTrackedSessions();
+    setInterval(() => { void refreshTrackedSessions(); }, 15_000).unref();
     startCloudSyncTimer();
   });
 }
@@ -48,7 +50,13 @@ function startCloudSyncTimer(): void {
   }, CLOUD_SYNC_INTERVAL_MS).unref();
 }
 
-function handleEvent(event: DaemonEvent): void {
+export function handleEvent(event: DaemonEvent): void {
+  if (event.type === 'session-end' && event.sessionId?.startsWith('claude:')) {
+    const existing = getSession(event.sessionId);
+    if (existing && event.timestamp >= existing.updatedAt) removeSession(event.sessionId);
+    replaceOverlaySnapshot(listSessions());
+    return;
+  }
   if (event.type === 'session-exit') {
     if (event.launcherPid) {
       markSessionsByLauncherPidDone(event.launcherPid);
@@ -107,6 +115,7 @@ function handleEvent(event: DaemonEvent): void {
   }
 }
 
-function replayTrackedSessions(): void {
+async function refreshTrackedSessions(): Promise<void> {
+  await reconcileClaudeSessions();
   replaceOverlaySnapshot(listSessions());
 }
