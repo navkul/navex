@@ -1,6 +1,7 @@
 import AppKit
 import Carbon.HIToolbox
 import Foundation
+import QuartzCore
 
 enum SessionStatus: String, Decodable {
     case active
@@ -750,10 +751,11 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
     }
 
     private enum MotionMetrics {
-        static let duration: TimeInterval = 0.32
-        static let frameInterval: TimeInterval = 1.0 / 60.0
+        static let duration: TimeInterval = 0.46
+        static let minimumDuration: TimeInterval = 0.16
         static let shadowClearance: CGFloat = 24
         static let completionDisplayDuration: TimeInterval = 10
+        static let animationKey = "navex.slide"
     }
 
     private let logger = OverlayLogger.shared
@@ -777,10 +779,12 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
     private var snapshotTimer: Timer?
     private var workingAnimationStep = 0
     private var controlTimer: Timer?
-    private var slideTimer: Timer?
+    private var slideHost: FlippedView?
+    private var slideToken: UUID?
+    private var slideDistance: CGFloat = 0
+    private var refreshAfterSlide = false
     private var completionDismissTimer: Timer?
     private var restingFrame: NSRect = .zero
-    private var slideVisibility: CGFloat = 1
     private var slidingOut = false
     private let showOnLaunch = envValue("NAVEX_OVERLAY_SHOW_ON_LAUNCH") == "1"
     private var visibleRowsContentHeight: CGFloat = 1
@@ -879,6 +883,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
         window.level = .statusBar
         window.ignoresMouseEvents = false
         window.isReleasedWhenClosed = false
+        window.animationBehavior = .none
 
         rootView.wantsLayer = true
         rootView.frame = NSRect(x: 0, y: 0, width: presentation.width, height: 180)
@@ -962,6 +967,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
     }
 
     private func advanceWorkingAnimation() {
+        guard slideHost == nil else { return }
         workingAnimationStep = (workingAnimationStep + 1) % workingAnimationFrames.count
         headerSubtitle.stringValue = headerSubtitleText()
     }
@@ -1118,6 +1124,12 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
     }
 
     private func refresh() {
+        // Keep layout and row reconstruction off the animation's critical path.
+        guard slideHost == nil else {
+            refreshAfterSlide = true
+            return
+        }
+        refreshAfterSlide = false
         logger.log("refresh start items=\(items.count)")
         headerTitle.stringValue = currentAppDisplayName()
         updateStatusItem()
@@ -1355,7 +1367,8 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
 
     @objc private func screensChanged() {
         // Never move to another display automatically when the selected one disconnects.
-        layoutPanel()
+        cancelSlide()
+        refresh()
     }
 
     private func selectNextScreen(commandID: String = UUID().uuidString) {
@@ -1418,18 +1431,17 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
         if !animated || reduceMotion {
             cancelSlide()
         }
-        if shouldSlide && !window.isVisible {
-            slideVisibility = 0
-        }
         window.collectionBehavior = [.canJoinAllSpaces]
         refresh()
         logger.log("showOverlay reason=\(reason) visibleBefore=\(window.isVisible) activeSpaceBefore=\(window.isOnActiveSpace)")
-        NSApp.activate(ignoringOtherApps: false)
-        window.makeKeyAndOrderFront(nil)
-        window.orderFrontRegardless()
+        // Prepare the offscreen layer before ordering the window in to avoid a flash.
         if shouldSlide {
             animateSlide(visible: true)
         }
+        window.alphaValue = 1
+        NSApp.activate(ignoringOtherApps: false)
+        window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
         if autoDismiss {
             resetCompletionDismiss()
         }
@@ -1449,8 +1461,9 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
             animateSlide(visible: false)
             return
         }
-        cancelSlide()
+        window.alphaValue = 0
         window.orderOut(nil)
+        cancelSlide()
         refresh()
     }
 
@@ -1470,49 +1483,103 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
     }
 
     private func cancelSlide() {
-        slideTimer?.invalidate()
-        slideTimer = nil
-        slideVisibility = 1
+        slideToken = nil
         slidingOut = false
+        guard slideHost != nil, let window = overlayWindow else { return }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        rootView.layer?.removeAnimation(forKey: MotionMetrics.animationKey)
+        rootView.layer?.transform = CATransform3DIdentity
+        rootView.layer?.shadowOpacity = 0
+        rootView.removeFromSuperview()
+        window.contentView = rootView
+        slideHost = nil
+        window.setFrame(restingFrame, display: false)
+        rootView.frame = NSRect(origin: .zero, size: restingFrame.size)
+        window.hasShadow = true
+        window.ignoresMouseEvents = false
+        CATransaction.commit()
     }
 
     private func positionOverlay() {
-        guard let window = overlayWindow, let screen = currentScreenGeometry() else { return }
-        var frame = restingFrame
-        let offscreenX = screen.screenFrame.maxX + MotionMetrics.shadowClearance
-        frame.origin.x += (offscreenX - restingFrame.minX) * (1 - slideVisibility)
-        window.setFrame(frame, display: true)
+        guard slideHost == nil else { return }
+        overlayWindow?.setFrame(restingFrame, display: true)
     }
 
     private func animateSlide(visible: Bool) {
-        slideTimer?.invalidate()
+        guard let window = overlayWindow, let screen = currentScreenGeometry(),
+              let layer = rootView.layer else { return }
+        let token = UUID()
+        slideToken = token
+        let startOffset: CGFloat
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        if slideHost == nil {
+            let padding = MotionMetrics.shadowClearance
+            slideDistance = screen.screenFrame.maxX - restingFrame.minX + padding
+            startOffset = visible ? slideDistance : 0
+            // A stationary, clipped surface lets the compositor move the content.
+            // It also prevents the panel leaking onto an adjacent display.
+            let host = FlippedView()
+            host.wantsLayer = true
+            host.layer?.masksToBounds = true
+            window.hasShadow = false
+            window.contentView = host
+            window.setFrame(NSRect(
+                x: restingFrame.minX - padding, y: restingFrame.minY - padding,
+                width: screen.screenFrame.maxX - restingFrame.minX + padding,
+                height: restingFrame.height + padding * 2
+            ), display: false)
+            rootView.frame = NSRect(x: padding, y: padding, width: restingFrame.width, height: restingFrame.height)
+            rootView.autoresizingMask = []
+            host.addSubview(rootView)
+            layer.masksToBounds = false
+            layer.shadowColor = NSColor.black.cgColor
+            layer.shadowOpacity = 0.25
+            layer.shadowRadius = 12
+            layer.shadowOffset = CGSize(width: 0, height: -3)
+            layer.shadowPath = CGPath(roundedRect: rootView.bounds, cornerWidth: 22, cornerHeight: 22, transform: nil)
+            slideHost = host
+            window.ignoresMouseEvents = true
+        } else {
+            // Reverse from the actual displayed position, not the model's endpoint.
+            startOffset = layer.presentation()?.transform.m41 ?? layer.transform.m41
+        }
         slidingOut = !visible
-        let startVisibility = slideVisibility
-        let endVisibility: CGFloat = visible ? 1 : 0
-        let startedAt = ProcessInfo.processInfo.systemUptime
-        logger.log("slideOverlay start visible=\(visible) frame=\(NSStringFromRect(overlayWindow?.frame ?? .zero)) restingFrame=\(NSStringFromRect(restingFrame))")
-        let timer = Timer(timeInterval: MotionMetrics.frameInterval, repeats: true) { [weak self] timer in
-            guard let self else {
-                timer.invalidate()
-                return
-            }
-            let progress = min(1, (ProcessInfo.processInfo.systemUptime - startedAt) / MotionMetrics.duration)
-            let eased = visible ? 1 - pow(1 - progress, 3) : pow(progress, 3)
-            self.slideVisibility = startVisibility + (endVisibility - startVisibility) * CGFloat(eased)
-            self.positionOverlay()
-            if progress >= 1 {
-                self.cancelSlide()
+        let endOffset: CGFloat = visible ? 0 : slideDistance
+        let duration = max(MotionMetrics.minimumDuration,
+            MotionMetrics.duration * Double(abs(endOffset - startOffset) / max(1, slideDistance)))
+        layer.removeAnimation(forKey: MotionMetrics.animationKey)
+        layer.transform = CATransform3DMakeTranslation(endOffset, 0, 0)
+        let animation = CABasicAnimation(keyPath: "transform.translation.x")
+        animation.fromValue = startOffset
+        animation.toValue = endOffset
+        animation.duration = duration
+        animation.timingFunction = CAMediaTimingFunction(controlPoints: 0.4, 0, 0.2, 1)
+        // AppKit owns the backing layer's model geometry. Hold the final pose
+        // until cleanup so it cannot flash back onscreen between transactions.
+        animation.fillMode = .forwards
+        animation.isRemovedOnCompletion = false
+        CATransaction.setCompletionBlock { [weak self] in
+            DispatchQueue.main.async {
+                guard let self, self.slideToken == token else { return }
                 if !visible {
+                    // Make restoring the live view/normal frame unobservable,
+                    // even if the window server processes orderOut separately.
+                    self.overlayWindow?.alphaValue = 0
                     self.overlayWindow?.orderOut(nil)
-                    self.refresh()
-                } else {
-                    self.positionOverlay()
                 }
-                self.logger.log("slideOverlay finished visible=\(visible)")
+                self.cancelSlide()
+                if self.refreshAfterSlide || !visible {
+                    self.refreshAfterSlide = false
+                    self.refresh()
+                }
+                self.logger.log("slideOverlay finished visible=\(visible) windowVisible=\(self.overlayWindow?.isVisible ?? false) alpha=\(self.overlayWindow?.alphaValue ?? 0)")
             }
         }
-        slideTimer = timer
-        RunLoop.main.add(timer, forMode: .common)
+        layer.add(animation, forKey: MotionMetrics.animationKey)
+        CATransaction.commit()
+        logger.log("slideOverlay start visible=\(visible) compositor=true from=\(startOffset) to=\(endOffset) duration=\(duration)")
     }
 
     private func updateHotkeyRegistration() {
