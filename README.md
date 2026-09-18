@@ -10,7 +10,7 @@ A personal macOS menu-bar companion for Codex and Claude Code.
 
 - Track working and finished agents from the CLI or desktop apps.
 - See blue for working agents and green when control returns, with a one-line completion summary.
-- Completion alerts slide in, then slide out 10 seconds after the latest finish; manual toggles remain immediate.
+- Completion alerts slide in, then slide out 10 seconds after the latest finish; manual toggles use the same slide animations.
 - Recognize Claude and Codex by their icons and separate Roman numbering.
 - Open Codex desktop tasks or return to terminal sessions in Terminal.app and iTerm2. Claude desktop rows open the app; select the session there.
 - Reorder, dismiss, and keep tracked sessions across restarts.

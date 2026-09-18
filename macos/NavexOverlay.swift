@@ -1022,21 +1022,17 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
             guard let sessionId = command.sessionId,
                   let item = items[sessionId], item.status != .active else { return }
             stateStore.moveToTop(sessionId: sessionId)
-            showOverlay(reason: "control-completion", animated: true)
+            showOverlay(reason: "control-completion", animated: true, autoDismiss: true)
         case "screen":
             if stateStore.lastScreenCommandID != command.commandId {
                 selectNextScreen(commandID: command.commandId)
             }
         case "show":
-            showOverlay(reason: "control-show")
+            showOverlay(reason: "control-show", animated: true)
         case "hide":
-            hideOverlay(reason: "control-hide")
+            hideOverlay(reason: "control-hide", animated: true)
         case "toggle":
-            if overlayWindow?.isVisible == true {
-                hideOverlay(reason: "control-toggle-hide")
-            } else {
-                showOverlay(reason: "control-toggle-show")
-            }
+            toggleOverlay()
         default:
             break
         }
@@ -1114,7 +1110,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
             }
             refresh()
             if !completedIds.isEmpty {
-                showOverlay(reason: "\(reason)-completed", animated: true)
+                showOverlay(reason: "\(reason)-completed", animated: true, autoDismiss: true)
             } else if !addedIds.isEmpty && addedIds.contains(where: { nextItems[$0]?.status == .done || nextItems[$0]?.status == .waiting || nextItems[$0]?.kind == "cloud-task" }) {
                 showOverlay(reason: reason)
             }
@@ -1385,12 +1381,12 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
             return
         }
 
-        if window.isVisible {
+        if window.isVisible && !slidingOut {
             logger.log("toggleOverlay action=hide")
-            hideOverlay(reason: "toggle")
+            hideOverlay(reason: "toggle", animated: true)
         } else {
             logger.log("toggleOverlay action=show")
-            showOverlay(reason: "toggle")
+            showOverlay(reason: "toggle", animated: true)
         }
     }
 
@@ -1401,8 +1397,8 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func showOverlay(reason: String, animated: Bool = false) {
-        if !animated {
+    private func showOverlay(reason: String, animated: Bool = false, autoDismiss: Bool = false) {
+        if !autoDismiss {
             // Explicit opening keeps the panel available until the next completion.
             cancelCompletionDismiss()
         }
@@ -1434,7 +1430,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
         if shouldSlide {
             animateSlide(visible: true)
         }
-        if animated {
+        if autoDismiss {
             resetCompletionDismiss()
         }
         logger.log("showOverlay visibleAfter=\(window.isVisible) activeSpaceAfter=\(window.isOnActiveSpace)")
