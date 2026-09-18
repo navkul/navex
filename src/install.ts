@@ -96,7 +96,7 @@ export function renderHooksJson(): string {
             {
               type: 'command',
               command: hookCommand('session-end'),
-              timeout: 5,
+              timeout: 3,
               statusMessage: 'Navex closing session tracking'
             }
           ]
