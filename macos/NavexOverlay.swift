@@ -2,14 +2,6 @@ import AppKit
 import Carbon.HIToolbox
 import Foundation
 
-enum SummaryState: String, Decodable {
-    case ready
-    case done
-    case blocked
-    case failed
-    case needsInput = "needs-input"
-}
-
 enum SessionStatus: String, Decodable {
     case active
     case waiting
@@ -58,7 +50,6 @@ struct OverlayEvent: Decodable {
     let status: SessionStatus?
     let cloudStatus: String?
     let cloudDetail: String?
-    let state: SummaryState?
     let usage: SessionUsageSnapshot?
     let timestamp: String?
     let focusCommand: CommandSpec?
@@ -75,7 +66,6 @@ struct OverlayItem {
     let status: SessionStatus
     let cloudStatus: String?
     let cloudDetail: String?
-    let state: SummaryState
     let usage: SessionUsageSnapshot?
     let timestamp: String
     let focusCommand: CommandSpec
@@ -91,6 +81,7 @@ struct OverlayControlCommand: Decodable {
     let action: String
     let commandId: String
     let requestedAt: String
+    let sessionId: String?
 }
 
 struct OverlayStateFile: Codable {
@@ -514,7 +505,6 @@ final class OverlayRowView: NSView {
     let sessionId: String
 
     private let status: SessionStatus
-    private let kind: String
     private let openAction: (String) -> Void
     private let removeAction: (String) -> Void
     private let moveAction: (String, NSPoint) -> Void
@@ -532,7 +522,6 @@ final class OverlayRowView: NSView {
     ) {
         self.sessionId = item.sessionId
         self.status = item.status
-        self.kind = item.kind
         self.openAction = openAction
         self.removeAction = removeAction
         self.moveAction = moveAction
@@ -549,7 +538,8 @@ final class OverlayRowView: NSView {
         dot.translatesAutoresizingMaskIntoConstraints = false
         dot.wantsLayer = true
         dot.layer?.cornerRadius = 3
-        dot.layer?.backgroundColor = stateColor(item.state).cgColor
+        dot.layer?.backgroundColor = statusColor().cgColor
+        dot.toolTip = status == .active ? "Working" : "Finished — control returned"
 
         let agentIcon = NSImageView()
         agentIcon.translatesAutoresizingMaskIntoConstraints = false
@@ -598,6 +588,7 @@ final class OverlayRowView: NSView {
         titleRow.addArrangedSubview(dot)
 
         summaryField.stringValue = item.summary
+        summaryField.toolTip = item.summary
         summaryField.font = overlayFont(size: 11, weight: .medium)
         summaryField.textColor = NSColor.secondaryLabelColor.withAlphaComponent(0.94)
         summaryField.translatesAutoresizingMaskIntoConstraints = false
@@ -655,13 +646,6 @@ final class OverlayRowView: NSView {
 
     override var acceptsFirstResponder: Bool {
         true
-    }
-
-    func updateWorkingAnimation(step: Int) {
-        guard status == .active, kind != "cloud-task" else {
-            return
-        }
-        summaryField.stringValue = "Working\(workingAnimationSuffix(step: step))"
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -749,23 +733,11 @@ final class OverlayRowView: NSView {
         return actionRect.contains(point)
     }
 
-    private func stateColor(_ state: SummaryState) -> NSColor {
-        if status == .active && kind != "cloud-task" {
+    private func statusColor() -> NSColor {
+        if status == .active {
             return NSColor(calibratedRed: 0.43, green: 0.71, blue: 0.98, alpha: 0.98)
         }
-
-        switch state {
-        case .done:
-            return NSColor(calibratedRed: 0.45, green: 0.83, blue: 0.63, alpha: 0.95)
-        case .blocked:
-            return NSColor(calibratedRed: 0.95, green: 0.72, blue: 0.35, alpha: 0.95)
-        case .failed:
-            return NSColor(calibratedRed: 0.96, green: 0.42, blue: 0.42, alpha: 0.95)
-        case .needsInput:
-            return NSColor(calibratedRed: 0.53, green: 0.74, blue: 0.98, alpha: 0.95)
-        case .ready:
-            return NSColor(calibratedWhite: 0.72, alpha: 0.95)
-        }
+        return NSColor(calibratedRed: 0.45, green: 0.83, blue: 0.63, alpha: 0.95)
     }
 
 }
@@ -775,6 +747,13 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
         static let headerHeight: CGFloat = 66
         static let footerHeight: CGFloat = 16
         static let rowSpacing: CGFloat = 10
+    }
+
+    private enum MotionMetrics {
+        static let duration: TimeInterval = 0.32
+        static let frameInterval: TimeInterval = 1.0 / 60.0
+        static let shadowClearance: CGFloat = 24
+        static let completionDisplayDuration: TimeInterval = 10
     }
 
     private let logger = OverlayLogger.shared
@@ -790,7 +769,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
     private let rowsContainer = FlippedView(frame: .zero)
     private let stateStore = OverlayStateStore(url: OverlayApp.overlayStateURL())
     private var items: [String: OverlayItem] = [:]
-    private var presentation = OverlayPresentation(appDisplayName: "Navex", hotkey: "cmd+shift+;", width: 384, maxVisibleRows: 4, summaryVisible: true, summaryMaxLines: 2)
+    private var presentation = OverlayPresentation(appDisplayName: "Navex", hotkey: "cmd+shift+;", width: 384, maxVisibleRows: 4, summaryVisible: true, summaryMaxLines: 1)
     private let decoder = JSONDecoder()
     private let snapshotURL = OverlayApp.overlaySnapshotURL()
     private let controlURL = OverlayApp.overlayControlURL()
@@ -798,6 +777,11 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
     private var snapshotTimer: Timer?
     private var workingAnimationStep = 0
     private var controlTimer: Timer?
+    private var slideTimer: Timer?
+    private var completionDismissTimer: Timer?
+    private var restingFrame: NSRect = .zero
+    private var slideVisibility: CGFloat = 1
+    private var slidingOut = false
     private let showOnLaunch = envValue("NAVEX_OVERLAY_SHOW_ON_LAUNCH") == "1"
     private var visibleRowsContentHeight: CGFloat = 1
     private var lastHandledControlId = ""
@@ -946,10 +930,8 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
 
         scrollView.drawsBackground = false
         scrollView.borderType = .noBorder
-        scrollView.hasVerticalScroller = true
+        scrollView.hasVerticalScroller = false
         scrollView.hasHorizontalScroller = false
-        scrollView.autohidesScrollers = true
-        scrollView.scrollerStyle = .overlay
 
         rowsContainer.wantsLayer = false
         rowsContainer.frame = NSRect(x: 0, y: 0, width: presentation.width - 32, height: 1)
@@ -982,9 +964,6 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
     private func advanceWorkingAnimation() {
         workingAnimationStep = (workingAnimationStep + 1) % workingAnimationFrames.count
         headerSubtitle.stringValue = headerSubtitleText()
-        for case let row as OverlayRowView in rowsContainer.subviews {
-            row.updateWorkingAnimation(step: workingAnimationStep)
-        }
     }
 
     private func startControlPolling() {
@@ -1038,6 +1017,12 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
 
         logger.log("applyOverlayControl action=\(command.action) commandId=\(command.commandId)")
         switch command.action {
+        case "completion":
+            loadSnapshotIfNeeded(reason: "control-completion", allowSameRaw: false)
+            guard let sessionId = command.sessionId,
+                  let item = items[sessionId], item.status != .active else { return }
+            stateStore.moveToTop(sessionId: sessionId)
+            showOverlay(reason: "control-completion", animated: true)
         case "screen":
             if stateStore.lastScreenCommandID != command.commandId {
                 selectNextScreen(commandID: command.commandId)
@@ -1085,13 +1070,12 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
             nextItems[event.sessionId] = OverlayItem(
                 sessionId: event.sessionId,
                 displayName: event.displayName ?? "Codex",
-                summary: event.summary ?? "Finished. Open the session when you are ready to continue.",
+                summary: event.summary ?? (event.status == .active ? "Working…" : "Finished."),
                 agent: event.agent ?? "codex",
                 kind: event.kind ?? "codex-thread",
                 status: event.status ?? .done,
                 cloudStatus: event.cloudStatus,
                 cloudDetail: event.cloudDetail,
-                state: event.state ?? .ready,
                 usage: event.usage,
                 timestamp: event.timestamp ?? "",
                 focusCommand: focusCommand,
@@ -1123,13 +1107,16 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
         }
         logger.log("applySnapshot reason=\(reason) items=\(items.count) added=\(addedIds.count) removed=\(removedIds.count) completed=\(completedIds.count) render=\(shouldRender)")
         if shouldRender {
+            if items.isEmpty && !removedIds.isEmpty {
+                // Keep the outgoing panel intact until it is offscreen.
+                hideOverlay(reason: "\(reason)-clear", animated: true)
+                return
+            }
             refresh()
             if !completedIds.isEmpty {
-                showOverlay(reason: "\(reason)-completed")
+                showOverlay(reason: "\(reason)-completed", animated: true)
             } else if !addedIds.isEmpty && addedIds.contains(where: { nextItems[$0]?.status == .done || nextItems[$0]?.status == .waiting || nextItems[$0]?.kind == "cloud-task" }) {
                 showOverlay(reason: reason)
-            } else if items.isEmpty && !removedIds.isEmpty {
-                hideOverlay(reason: "\(reason)-clear")
             }
         }
     }
@@ -1163,7 +1150,6 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
                     self?.moveSession(sessionId: sessionId, to: point)
                 }
             )
-            row.updateWorkingAnimation(step: workingAnimationStep)
             let rowHeight = measuredRowHeight(for: row, width: rowWidth)
             row.translatesAutoresizingMaskIntoConstraints = true
             row.frame = NSRect(x: 0, y: y, width: rowWidth, height: rowHeight)
@@ -1258,16 +1244,16 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
         }
 
         if let visibleFrame = currentScreenVisibleFrame() {
-            window.setFrame(
-                NSRect(
-                    x: visibleFrame.maxX - width - 18,
-                    y: visibleFrame.maxY - height - 14,
-                    width: width,
-                    height: height
-                ),
-                display: true
+            restingFrame = NSRect(
+                x: visibleFrame.maxX - width - 18,
+                y: visibleFrame.maxY - height - 14,
+                width: width,
+                height: height
             )
+            positionOverlay()
         } else {
+            cancelCompletionDismiss()
+            cancelSlide()
             window.orderOut(nil)
         }
         logger.log("layoutPanel frame=\(NSStringFromRect(window.frame))")
@@ -1401,7 +1387,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
 
         if window.isVisible {
             logger.log("toggleOverlay action=hide")
-            window.orderOut(nil)
+            hideOverlay(reason: "toggle")
         } else {
             logger.log("toggleOverlay action=show")
             showOverlay(reason: "toggle")
@@ -1415,33 +1401,122 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func showOverlay(reason: String) {
+    private func showOverlay(reason: String, animated: Bool = false) {
+        if !animated {
+            // Explicit opening keeps the panel available until the next completion.
+            cancelCompletionDismiss()
+        }
         guard let window = overlayWindow else {
             logger.log("showOverlay reason=\(reason) missingWindow=true")
             return
         }
 
         guard currentScreenGeometry() != nil else {
+            cancelCompletionDismiss()
+            cancelSlide()
             window.orderOut(nil)
             return
         }
+        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        let shouldSlide = animated && (!window.isVisible || slidingOut) && !reduceMotion
+        if !animated || reduceMotion {
+            cancelSlide()
+        }
+        if shouldSlide && !window.isVisible {
+            slideVisibility = 0
+        }
         window.collectionBehavior = [.canJoinAllSpaces]
-        layoutPanel()
+        refresh()
         logger.log("showOverlay reason=\(reason) visibleBefore=\(window.isVisible) activeSpaceBefore=\(window.isOnActiveSpace)")
         NSApp.activate(ignoringOtherApps: false)
         window.makeKeyAndOrderFront(nil)
         window.orderFrontRegardless()
+        if shouldSlide {
+            animateSlide(visible: true)
+        }
+        if animated {
+            resetCompletionDismiss()
+        }
         logger.log("showOverlay visibleAfter=\(window.isVisible) activeSpaceAfter=\(window.isOnActiveSpace)")
     }
 
-    private func hideOverlay(reason: String) {
+    private func hideOverlay(reason: String, animated: Bool = false) {
+        cancelCompletionDismiss()
         guard let window = overlayWindow else {
             logger.log("hideOverlay reason=\(reason) missingWindow=true")
             return
         }
 
         logger.log("hideOverlay reason=\(reason) visibleBefore=\(window.isVisible)")
+        if animated && window.isVisible && currentScreenGeometry() != nil
+            && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            animateSlide(visible: false)
+            return
+        }
+        cancelSlide()
         window.orderOut(nil)
+        refresh()
+    }
+
+    private func cancelCompletionDismiss() {
+        completionDismissTimer?.invalidate()
+        completionDismissTimer = nil
+    }
+
+    private func resetCompletionDismiss() {
+        cancelCompletionDismiss()
+        let timer = Timer(timeInterval: MotionMetrics.completionDisplayDuration, repeats: false) { [weak self] _ in
+            self?.hideOverlay(reason: "completion-timeout", animated: true)
+        }
+        completionDismissTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
+        logger.log("completionDismiss reset seconds=\(MotionMetrics.completionDisplayDuration)")
+    }
+
+    private func cancelSlide() {
+        slideTimer?.invalidate()
+        slideTimer = nil
+        slideVisibility = 1
+        slidingOut = false
+    }
+
+    private func positionOverlay() {
+        guard let window = overlayWindow, let screen = currentScreenGeometry() else { return }
+        var frame = restingFrame
+        let offscreenX = screen.screenFrame.maxX + MotionMetrics.shadowClearance
+        frame.origin.x += (offscreenX - restingFrame.minX) * (1 - slideVisibility)
+        window.setFrame(frame, display: true)
+    }
+
+    private func animateSlide(visible: Bool) {
+        slideTimer?.invalidate()
+        slidingOut = !visible
+        let startVisibility = slideVisibility
+        let endVisibility: CGFloat = visible ? 1 : 0
+        let startedAt = ProcessInfo.processInfo.systemUptime
+        logger.log("slideOverlay start visible=\(visible) frame=\(NSStringFromRect(overlayWindow?.frame ?? .zero)) restingFrame=\(NSStringFromRect(restingFrame))")
+        let timer = Timer(timeInterval: MotionMetrics.frameInterval, repeats: true) { [weak self] timer in
+            guard let self else {
+                timer.invalidate()
+                return
+            }
+            let progress = min(1, (ProcessInfo.processInfo.systemUptime - startedAt) / MotionMetrics.duration)
+            let eased = visible ? 1 - pow(1 - progress, 3) : pow(progress, 3)
+            self.slideVisibility = startVisibility + (endVisibility - startVisibility) * CGFloat(eased)
+            self.positionOverlay()
+            if progress >= 1 {
+                self.cancelSlide()
+                if !visible {
+                    self.overlayWindow?.orderOut(nil)
+                    self.refresh()
+                } else {
+                    self.positionOverlay()
+                }
+                self.logger.log("slideOverlay finished visible=\(visible)")
+            }
+        }
+        slideTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
     }
 
     private func updateHotkeyRegistration() {

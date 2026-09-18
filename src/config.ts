@@ -20,7 +20,7 @@ const DEFAULT_CONFIG: AppConfig = {
   overlaySummaryStyle: 'smart',
   overlaySummaryMaxChars: 160,
   overlaySummaryMaxWords: 24,
-  overlaySummaryMaxLines: 2
+  overlaySummaryMaxLines: 1
 };
 
 export const APP_CONFIG_KEYS = [

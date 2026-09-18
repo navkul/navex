@@ -58,11 +58,12 @@ export function sendSessionCompletionAlert(session: SessionRecord): void {
   const event = overlayShowEvent(session);
   updateOverlaySnapshot(event);
   writeFileSync(overlayControlPath(), JSON.stringify({
-    action: 'show',
+    action: 'completion',
+    sessionId: session.sessionId,
     commandId: randomUUID(),
     requestedAt: new Date().toISOString()
   }, null, 2));
-  ensureOverlayHelper(true);
+  ensureOverlayHelper(false);
 }
 
 export function replaceOverlaySnapshot(sessions: SessionRecord[]): void {
@@ -195,7 +196,10 @@ function overlaySummary(session: SessionRecord): string {
   }
   const fallback = session.kind === 'cloud-task'
     ? cloudOverlaySummary(session)
-    : 'Finished. Open the session when you are ready to continue.';
+    : session.status === 'interrupted' ? 'Interrupted.'
+    : session.status === 'failed' ? 'Failed. Open the session for details.'
+    : session.status === 'waiting' ? 'Needs your input.'
+    : 'Finished.';
   return truncate(session.lastSummary ?? fallback, config.overlaySummaryMaxChars);
 }
 
