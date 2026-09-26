@@ -142,7 +142,7 @@ private let overlayIso8601Formatter: ISO8601DateFormatter = {
     return formatter
 }()
 
-private let workingAnimationFrames = [".", "..", "..."]
+private let workingAnimationFrames = [".", "..", "...", ".."]
 
 private func workingAnimationSuffix(step: Int) -> String {
     workingAnimationFrames[step % workingAnimationFrames.count]
@@ -331,6 +331,7 @@ final class HotkeyController {
     private var eventHandler: EventHandlerRef?
     private var hotKeyRef: EventHotKeyRef?
     private var registeredSpec: HotkeySpec?
+    private var actionKeyHeld = false
 
     init(target: OverlayApp, logger: OverlayLogger, hotkeyId: UInt32 = 1) {
         self.target = target
@@ -375,7 +376,20 @@ final class HotkeyController {
         }
     }
 
+    fileprivate func handleKeyEvent(pressed: Bool) {
+        if hotkeyId == 3 {
+            if !pressed { actionKeyHeld = false; return }
+            guard !actionKeyHeld else { return }
+            actionKeyHeld = true
+            target?.handleGlobalExecuteHotkey()
+        } else if pressed {
+            if hotkeyId == 2 { target?.handleGlobalScreenHotkey() }
+            else { target?.handleGlobalToggleHotkey() }
+        }
+    }
+
     private func unregister() {
+        actionKeyHeld = false
         if let hotKeyRef {
             UnregisterEventHotKey(hotKeyRef)
             self.hotKeyRef = nil
@@ -384,12 +398,15 @@ final class HotkeyController {
     }
 
     private func installHandler() {
-        var eventSpec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+        var eventSpecs = [
+            EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed)),
+            EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyReleased))
+        ]
         let status = InstallEventHandler(
             GetApplicationEventTarget(),
             hotkeyEventCallback,
-            1,
-            &eventSpec,
+            eventSpecs.count,
+            &eventSpecs,
             Unmanaged.passUnretained(self).toOpaque(),
             &eventHandler
         )
@@ -420,11 +437,7 @@ private let hotkeyEventCallback: EventHandlerUPP = { _, eventRef, userData in
 
     let controller = Unmanaged<HotkeyController>.fromOpaque(userData).takeUnretainedValue()
     guard hotKeyID.id == controller.hotkeyId else { return OSStatus(eventNotHandledErr) }
-    if hotKeyID.id == 2 {
-        controller.target?.handleGlobalScreenHotkey()
-    } else {
-        controller.target?.handleGlobalToggleHotkey()
-    }
+    controller.handleKeyEvent(pressed: GetEventKind(eventRef) == UInt32(kEventHotKeyPressed))
     return noErr
 }
 
@@ -489,6 +502,21 @@ final class OverlayStateStore {
     }
 }
 
+enum OverlayAction: String {
+    case open, remove
+}
+
+struct OverlayActionTarget: Equatable {
+    let sessionId: String
+    let action: OverlayAction
+}
+
+final class OverlayActionButton: NSButton {
+    // NSButton's bezel alignment insets otherwise make a constrained square
+    // slightly taller than it is wide, distorting the selection circle.
+    override var alignmentRectInsets: NSEdgeInsets { NSEdgeInsetsZero }
+}
+
 final class OverlayRowView: NSView {
     private enum Metrics {
         static let horizontalInset: CGFloat = 16
@@ -496,8 +524,8 @@ final class OverlayRowView: NSView {
         static let bottomInset: CGFloat = 12
         static let contentSpacing: CGFloat = 6
         static let titleSpacing: CGFloat = 8
-        static let actionSpacing: CGFloat = 6
-        static let actionButtonSize: CGFloat = 16
+        static let actionSpacing: CGFloat = 4
+        static let actionButtonSize: CGFloat = 24
         static let contentToActionsGap: CGFloat = 14
         static let dotSize: CGFloat = 6
         static let summaryMinHeight: CGFloat = 16
@@ -506,10 +534,12 @@ final class OverlayRowView: NSView {
     let sessionId: String
 
     private let status: SessionStatus
+    private let animatesWorkingSummary: Bool
     private let openAction: (String) -> Void
     private let removeAction: (String) -> Void
     private let moveAction: (String, NSPoint) -> Void
     private let actionButtonsStack = NSStackView()
+    private var actionButtons: [OverlayAction: NSButton] = [:]
     private let summaryField = NSTextField(wrappingLabelWithString: "")
     private var trackingPoint: NSPoint?
     private var isDraggingRow = false
@@ -517,12 +547,14 @@ final class OverlayRowView: NSView {
     init(
         item: OverlayItem,
         presentation: OverlayPresentation,
+        workingAnimationStep: Int,
         openAction: @escaping (String) -> Void,
         removeAction: @escaping (String) -> Void,
         moveAction: @escaping (String, NSPoint) -> Void
     ) {
         self.sessionId = item.sessionId
         self.status = item.status
+        self.animatesWorkingSummary = item.status == .active && item.kind != "cloud-task" && presentation.summaryVisible
         self.openAction = openAction
         self.removeAction = removeAction
         self.moveAction = moveAction
@@ -568,6 +600,9 @@ final class OverlayRowView: NSView {
             tintColor: NSColor.tertiaryLabelColor.withAlphaComponent(0.72)
         )
 
+        actionButtons = [.open: openButton, .remove: removeButton]
+        removeButton.isEnabled = item.removeCommand != nil
+
         actionButtonsStack.orientation = .vertical
         actionButtonsStack.alignment = .centerX
         actionButtonsStack.spacing = Metrics.actionSpacing
@@ -589,6 +624,7 @@ final class OverlayRowView: NSView {
         titleRow.addArrangedSubview(dot)
 
         summaryField.stringValue = item.summary
+        updateWorkingAnimation(step: workingAnimationStep)
         summaryField.toolTip = item.summary
         summaryField.font = overlayFont(size: 11, weight: .medium)
         summaryField.textColor = NSColor.secondaryLabelColor.withAlphaComponent(0.94)
@@ -632,9 +668,12 @@ final class OverlayRowView: NSView {
             contentColumn.trailingAnchor.constraint(equalTo: actionButtonsStack.leadingAnchor, constant: -Metrics.contentToActionsGap),
             bodyStack.leadingAnchor.constraint(equalTo: contentColumn.leadingAnchor),
             bodyStack.trailingAnchor.constraint(equalTo: contentColumn.trailingAnchor),
-            bodyStack.topAnchor.constraint(equalTo: contentColumn.topAnchor),
-            bodyStack.bottomAnchor.constraint(equalTo: contentColumn.bottomAnchor),
-            actionButtonsStack.topAnchor.constraint(equalTo: topAnchor, constant: Metrics.topInset),
+            bodyStack.centerYAnchor.constraint(equalTo: contentColumn.centerYAnchor),
+            bodyStack.topAnchor.constraint(greaterThanOrEqualTo: contentColumn.topAnchor),
+            bodyStack.bottomAnchor.constraint(lessThanOrEqualTo: contentColumn.bottomAnchor),
+            actionButtonsStack.centerYAnchor.constraint(equalTo: centerYAnchor),
+            actionButtonsStack.topAnchor.constraint(greaterThanOrEqualTo: topAnchor, constant: Metrics.topInset),
+            actionButtonsStack.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor, constant: -Metrics.bottomInset),
             actionButtonsStack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Metrics.horizontalInset),
             actionButtonsStack.widthAnchor.constraint(equalToConstant: Metrics.actionButtonSize)
         ])
@@ -710,9 +749,37 @@ final class OverlayRowView: NSView {
         return field
     }
 
+    func updateWorkingAnimation(step: Int) {
+        guard animatesWorkingSummary else { return }
+        summaryField.stringValue = "Working\(workingAnimationSuffix(step: step))"
+    }
+
+    func selectAction(_ action: OverlayAction?) {
+        for (kind, button) in actionButtons {
+            let selected = kind == action
+            button.layer?.backgroundColor = NSColor.white.withAlphaComponent(selected ? 0.15 : 0).cgColor
+            button.layer?.borderColor = NSColor.white.withAlphaComponent(selected ? 0.16 : 0).cgColor
+            button.contentTintColor = selected ? NSColor.white.withAlphaComponent(0.96) : NSColor.tertiaryLabelColor
+            button.setAccessibilityHelp(selected ? "Selected action. Press Option Command semicolon to execute." : nil)
+        }
+    }
+
+    func scrollActionToVisible(_ action: OverlayAction) {
+        guard let button = actionButtons[action] else { return }
+        let viewportHeight = enclosingScrollView?.contentView.bounds.height ?? 0
+        let targetRect = bounds.height <= viewportHeight ? bounds : convert(button.bounds, from: button).insetBy(dx: 0, dy: -6)
+        scrollToVisible(targetRect)
+    }
+
     private func subtleIconButton(systemName: String, description: String, action: Selector, sessionId: String, tintColor: NSColor) -> NSButton {
-        let button = NSButton(title: "", target: self, action: action)
-        button.identifier = NSUserInterfaceItemIdentifier(sessionId)
+        let button = OverlayActionButton(title: "", target: self, action: action)
+        button.identifier = NSUserInterfaceItemIdentifier("\(sessionId).\(systemName)")
+        button.wantsLayer = true
+        button.layer?.cornerRadius = Metrics.actionButtonSize / 2
+        button.layer?.borderWidth = 1
+        button.focusRingType = .none
+        button.toolTip = "\(description) — select with ↑ / ↓, execute with ⌥⌘;"
+        button.setAccessibilityLabel(description)
         button.isBordered = false
         button.bezelStyle = .shadowlessSquare
         button.image = NSImage(
@@ -743,7 +810,7 @@ final class OverlayRowView: NSView {
 
 }
 
-final class OverlayApp: NSObject, NSApplicationDelegate {
+final class OverlayApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private enum LayoutMetrics {
         static let headerHeight: CGFloat = 66
         static let footerHeight: CGFloat = 16
@@ -789,6 +856,12 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
     private let showOnLaunch = envValue("NAVEX_OVERLAY_SHOW_ON_LAUNCH") == "1"
     private var visibleRowsContentHeight: CGFloat = 1
     private var lastHandledControlId = ""
+    private var selectedTarget: OverlayActionTarget?
+    private var keyboardNavigationActive = false
+    private var previousApplication: NSRunningApplication?
+    private var keyboardMonitor: Any?
+    private var pendingActions = Set<String>()
+    private lazy var executeHotkeyController = HotkeyController(target: self, logger: logger, hotkeyId: 3)
     private lazy var hotkeyController = HotkeyController(target: self, logger: logger)
     private lazy var screenHotkeyController = HotkeyController(target: self, logger: logger, hotkeyId: 2)
 
@@ -802,6 +875,10 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
         logger.log("applicationDidFinishLaunching activationPolicy=accessory snapshotPath=\(snapshotURL.path)")
         configureStatusItem()
         configurePanel()
+        keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self else { return event }
+            return self.handleNavigationEvent(event)
+        }
         updateHotkeyRegistration()
         loadSnapshotIfNeeded(reason: "did-finish", allowSameRaw: true)
         startSnapshotPolling()
@@ -876,6 +953,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
             defer: false
         )
         overlayWindow = window
+        window.delegate = self
 
         window.isOpaque = false
         window.backgroundColor = .clear
@@ -967,9 +1045,12 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
     }
 
     private func advanceWorkingAnimation() {
-        guard slideHost == nil else { return }
+        guard slideHost == nil, overlayWindow?.isVisible == true else { return }
         workingAnimationStep = (workingAnimationStep + 1) % workingAnimationFrames.count
         headerSubtitle.stringValue = headerSubtitleText()
+        for case let row as OverlayRowView in rowsContainer.subviews {
+            row.updateWorkingAnimation(step: workingAnimationStep)
+        }
     }
 
     private func startControlPolling() {
@@ -1027,7 +1108,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
             loadSnapshotIfNeeded(reason: "control-completion", allowSameRaw: false)
             guard let sessionId = command.sessionId,
                   let item = items[sessionId], item.status != .active else { return }
-            stateStore.moveToTop(sessionId: sessionId)
+            if !keyboardNavigationActive { stateStore.moveToTop(sessionId: sessionId) }
             showOverlay(reason: "control-completion", animated: true, autoDismiss: true)
         case "screen":
             if stateStore.lastScreenCommandID != command.commandId {
@@ -1098,15 +1179,17 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
             }
             return item.sessionId
         }
+        let previousOrder = orderedItems().map(\.sessionId)
         items = nextItems
         for sessionId in removedIds {
             stateStore.remove(sessionId: sessionId)
         }
-        if shouldRender || showOnLaunch {
+        if (shouldRender || showOnLaunch) && !keyboardNavigationActive {
             for sessionId in completedIds.reversed() {
                 stateStore.moveToTop(sessionId: sessionId)
             }
         }
+        reconcileSelection(previousOrder: previousOrder)
         logger.log("applySnapshot reason=\(reason) items=\(items.count) added=\(addedIds.count) removed=\(removedIds.count) completed=\(completedIds.count) render=\(shouldRender)")
         if shouldRender {
             if items.isEmpty && !removedIds.isEmpty {
@@ -1118,7 +1201,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
             if !completedIds.isEmpty {
                 showOverlay(reason: "\(reason)-completed", animated: true, autoDismiss: true)
             } else if !addedIds.isEmpty && addedIds.contains(where: { nextItems[$0]?.status == .done || nextItems[$0]?.status == .waiting || nextItems[$0]?.kind == "cloud-task" }) {
-                showOverlay(reason: reason)
+                showOverlay(reason: reason, animated: true, autoDismiss: true)
             }
         }
     }
@@ -1148,6 +1231,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
             let row = OverlayRowView(
                 item: item,
                 presentation: presentation,
+                workingAnimationStep: workingAnimationStep,
                 openAction: { [weak self] sessionId in
                     self?.openSession(sessionId: sessionId)
                 },
@@ -1175,6 +1259,8 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
             height: max(1, contentHeight(for: rowHeights, visibleCount: rowHeights.count))
         )
         layoutPanel()
+        updateSelectionAppearance(scroll: keyboardNavigationActive)
+        updateExecuteHotkeyRegistration()
         logger.log("refresh end arranged=\(rowsContainer.subviews.count)")
     }
 
@@ -1218,7 +1304,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
 
     private func statusItemTooltip() -> String {
         if let spec = resolvedHotkeySpec() {
-            return "\(currentAppDisplayName()) overlay toggle: \(spec.display); next display: ⌃⌥⌘K"
+            return "\(currentAppDisplayName()) overlay toggle: \(spec.display); next display: ⌃⌥⌘K; select: ↑ / ↓; execute: ⌥⌘;"
         }
         return "\(currentAppDisplayName()) overlay"
     }
@@ -1263,6 +1349,8 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
             cancelCompletionDismiss()
             cancelSlide()
             window.orderOut(nil)
+            keyboardNavigationActive = false
+            updateExecuteHotkeyRegistration()
         }
         logger.log("layoutPanel frame=\(NSStringFromRect(window.frame))")
     }
@@ -1394,9 +1482,9 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
             return
         }
 
-        if window.isVisible && !slidingOut {
+        if window.isVisible && !slidingOut && window.isKeyWindow {
             logger.log("toggleOverlay action=hide")
-            hideOverlay(reason: "toggle", animated: true)
+            hideOverlay(reason: "toggle", animated: true, restoreFocus: true)
         } else {
             logger.log("toggleOverlay action=show")
             showOverlay(reason: "toggle", animated: true)
@@ -1412,7 +1500,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
 
     private func showOverlay(reason: String, animated: Bool = false, autoDismiss: Bool = false) {
         if !autoDismiss {
-            // Explicit opening keeps the panel available until the next completion.
+            // Explicit interaction keeps the panel available until the user leaves.
             cancelCompletionDismiss()
         }
         guard let window = overlayWindow else {
@@ -1424,7 +1512,18 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
             cancelCompletionDismiss()
             cancelSlide()
             window.orderOut(nil)
+            keyboardNavigationActive = false
+            updateExecuteHotkeyRegistration()
             return
+        }
+        let wasVisible = window.isVisible && !slidingOut
+        if !wasVisible { rememberPreviousApplication() }
+        if !wasVisible || (autoDismiss && !keyboardNavigationActive) {
+            selectedTarget = orderedItems().first.map { OverlayActionTarget(sessionId: $0.sessionId, action: .open) }
+        }
+        if !autoDismiss {
+            rememberPreviousApplication()
+            keyboardNavigationActive = true
         }
         let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         let shouldSlide = animated && (!window.isVisible || slidingOut) && !reduceMotion
@@ -1439,17 +1538,27 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
             animateSlide(visible: true)
         }
         window.alphaValue = 1
-        NSApp.activate(ignoringOtherApps: false)
-        window.makeKeyAndOrderFront(nil)
+        if !autoDismiss {
+            NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
+        }
         window.orderFrontRegardless()
-        if autoDismiss {
+        updateSelectionAppearance(scroll: true)
+        updateExecuteHotkeyRegistration()
+        if autoDismiss && !keyboardNavigationActive {
             resetCompletionDismiss()
         }
         logger.log("showOverlay visibleAfter=\(window.isVisible) activeSpaceAfter=\(window.isOnActiveSpace)")
     }
 
-    private func hideOverlay(reason: String, animated: Bool = false) {
+    private func hideOverlay(reason: String, animated: Bool = false, restoreFocus: Bool = false) {
         cancelCompletionDismiss()
+        keyboardNavigationActive = false
+        executeHotkeyController.update(spec: nil)
+        if restoreFocus, overlayWindow?.isKeyWindow == true {
+            previousApplication?.activate(options: [])
+        }
+        previousApplication = nil
         guard let window = overlayWindow else {
             logger.log("hideOverlay reason=\(reason) missingWindow=true")
             return
@@ -1585,6 +1694,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
     private func updateHotkeyRegistration() {
         hotkeyController.update(spec: resolvedHotkeySpec())
         screenHotkeyController.update(spec: try? parseHotkeySpec("ctrl+option+cmd+k"))
+        updateExecuteHotkeyRegistration()
     }
 
     private func resolvedHotkeySpec() -> HotkeySpec? {
@@ -1596,16 +1706,127 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
         }
     }
 
+    func windowDidBecomeKey(_ notification: Notification) {
+        keyboardNavigationActive = true
+        cancelCompletionDismiss()
+    }
+
+    func windowDidResignKey(_ notification: Notification) {
+        keyboardNavigationActive = false
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        if let keyboardMonitor { NSEvent.removeMonitor(keyboardMonitor) }
+    }
+
+    private func finishEntryForInteraction() {
+        if slideHost != nil && !slidingOut {
+            cancelSlide()
+            refresh()
+        }
+    }
+
+    private func rememberPreviousApplication() {
+        if let front = NSWorkspace.shared.frontmostApplication,
+           front.processIdentifier != ProcessInfo.processInfo.processIdentifier {
+            previousApplication = front
+        }
+    }
+
+    private func actionTargets() -> [OverlayActionTarget] {
+        orderedItems().flatMap { item in
+            var targets = [OverlayActionTarget(sessionId: item.sessionId, action: .open)]
+            if item.removeCommand != nil { targets.append(OverlayActionTarget(sessionId: item.sessionId, action: .remove)) }
+            return targets
+        }
+    }
+
+    private func reconcileSelection(previousOrder: [String]) {
+        let targets = actionTargets()
+        if let selectedTarget, targets.contains(selectedTarget) { return }
+        let ordered = orderedItems()
+        let oldIndex = selectedTarget.flatMap { previousOrder.firstIndex(of: $0.sessionId) } ?? 0
+        selectedTarget = ordered.isEmpty ? nil : OverlayActionTarget(
+            sessionId: ordered[min(oldIndex, ordered.count - 1)].sessionId, action: .open)
+    }
+
+    private func updateSelectionAppearance(scroll: Bool = false) {
+        for case let row as OverlayRowView in rowsContainer.subviews {
+            let action = selectedTarget?.sessionId == row.sessionId ? selectedTarget?.action : nil
+            row.selectAction(action)
+            if scroll, let action, slideHost == nil { row.scrollActionToVisible(action) }
+        }
+    }
+
+    private func moveSelection(by delta: Int) {
+        finishEntryForInteraction()
+        let targets = actionTargets()
+        guard !targets.isEmpty else { return }
+        keyboardNavigationActive = true
+        cancelCompletionDismiss()
+        let index = selectedTarget.flatMap { targets.firstIndex(of: $0) } ?? 0
+        selectedTarget = targets[max(0, min(targets.count - 1, index + delta))]
+        updateSelectionAppearance(scroll: true)
+        logger.log("selection sessionId=\(selectedTarget!.sessionId) action=\(selectedTarget!.action.rawValue)")
+    }
+
+    private func handleNavigationEvent(_ event: NSEvent) -> NSEvent? {
+        guard event.window === overlayWindow, overlayWindow?.isKeyWindow == true,
+              !slidingOut, !(overlayWindow?.firstResponder is NSTextView) else { return event }
+        let modifiers = event.modifierFlags.intersection([.command, .option, .control, .shift])
+        // Carbon handles execution from other apps; also support normal AppKit
+        // key delivery when this window owns focus (including accessibility input).
+        if Int(event.keyCode) == kVK_ANSI_Semicolon, modifiers == [.command, .option], !executeShortcutCollides {
+            if !event.isARepeat { handleGlobalExecuteHotkey() }
+            return nil
+        }
+        guard modifiers.isEmpty else { return event }
+        switch Int(event.keyCode) {
+        case kVK_DownArrow: moveSelection(by: 1)
+        case kVK_UpArrow: moveSelection(by: -1)
+        case kVK_Escape: hideOverlay(reason: "escape", animated: true, restoreFocus: true)
+        default: return event
+        }
+        return nil
+    }
+
+    private func updateExecuteHotkeyRegistration() {
+        let visible = overlayWindow?.isVisible == true && !slidingOut && selectedTarget != nil
+        let spec = try? parseHotkeySpec("cmd+option+;")
+        // A customized toggle must never also execute an action.
+        executeHotkeyController.update(spec: visible && !executeShortcutCollides ? spec : nil)
+    }
+
+    private var executeShortcutCollides: Bool {
+        guard let toggle = resolvedHotkeySpec(), let execute = try? parseHotkeySpec("cmd+option+;") else { return false }
+        return toggle.keyCode == execute.keyCode && toggle.modifiers == execute.modifiers
+    }
+
+    fileprivate func handleGlobalExecuteHotkey() {
+        guard overlayWindow?.isVisible == true, !slidingOut,
+              let target = selectedTarget, actionTargets().contains(target) else { return }
+        finishEntryForInteraction()
+        keyboardNavigationActive = true
+        cancelCompletionDismiss()
+        logger.log("executeSelection sessionId=\(target.sessionId) action=\(target.action.rawValue)")
+        switch target.action {
+        case .open: openSession(sessionId: target.sessionId)
+        case .remove: removeSession(sessionId: target.sessionId)
+        }
+    }
+
     private func openSession(sessionId: String) {
-        guard let item = items[sessionId] else {
+        guard let item = items[sessionId], !pendingActions.contains(sessionId) else {
             return
         }
+        pendingActions.insert(sessionId)
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let success = self?.launch(item.focusCommand, waitForExit: true) ?? false
             DispatchQueue.main.async {
                 guard let self else {
                     return
                 }
+                self.pendingActions.remove(sessionId)
                 if !success {
                     self.logger.log("openSession failed sessionId=\(sessionId)")
                     self.loadSnapshotIfNeeded(reason: "focus-failed", allowSameRaw: true)
@@ -1616,14 +1837,18 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
     }
 
     private func removeSession(sessionId: String) {
-        guard let item = items[sessionId], let removeCommand = item.removeCommand else {
+        guard let item = items[sessionId], let removeCommand = item.removeCommand, !pendingActions.contains(sessionId) else {
             NSSound.beep()
             return
         }
 
+        pendingActions.insert(sessionId)
+        let previousOrder = orderedItems().map(\.sessionId)
         items.removeValue(forKey: sessionId)
         stateStore.remove(sessionId: sessionId)
-        refresh()
+        reconcileSelection(previousOrder: previousOrder)
+        if items.isEmpty { hideOverlay(reason: "remove-last", animated: true, restoreFocus: true) }
+        else { refresh() }
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let success = self?.launch(removeCommand, waitForExit: true) ?? false
@@ -1631,6 +1856,7 @@ final class OverlayApp: NSObject, NSApplicationDelegate {
                 guard let self else {
                     return
                 }
+                self.pendingActions.remove(sessionId)
                 if !success {
                     self.logger.log("removeSession failed sessionId=\(sessionId)")
                     self.loadSnapshotIfNeeded(reason: "remove-failed", allowSameRaw: true)

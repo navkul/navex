@@ -15,6 +15,7 @@
     "clean": "rm -rf dist",
     "check": "tsc --noEmit -p tsconfig.json",
     "test": "node --import tsx --test test/*.test.ts",
+    "test:overlay": "node scripts/test-overlay.mjs",
     "dev": "tsx src/cli.ts",
     "prepare": "npm run build"
   },
